@@ -1,0 +1,31 @@
+# Сборка и зависимости
+node_modules/
+app/src-tauri/target/
+*.exe
+
+# Служебные скрипты, резервные копии и личные данные программы
+tools/
+*.v2.json
+*-log.txt
+*.log
+
+# Локальные настройки Claude и рабочие заметки
+.claude/
+docs/HANDOFF.md
+
+# На диске, но не в репозитории: старый прототип, убранное расширение Chrome, макеты
+Focus.html
+archive/
+design/
+
+# Генерируется Tauri при сборке; иконки, которые сборка не использует (нужны только 4 из tauri.conf.json)
+app/src-tauri/gen/schemas/
+app/src-tauri/icons/*
+!app/src-tauri/icons/32x32.png
+!app/src-tauri/icons/128x128.png
+!app/src-tauri/icons/128x128@2x.png
+!app/src-tauri/icons/icon.ico
+
+# Windows
+Thumbs.db
+desktop.ini

@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Focus</title>
+<style>
+  html,body{margin:0;height:100%;overflow:hidden;background:transparent;
+    font:16px/1.5 "Segoe UI Variable Text","Segoe UI",system-ui,sans-serif;-webkit-user-select:none;user-select:none}
+  .wrap{position:absolute;inset:0;display:grid;place-items:center;color:#ece9ff;
+    background:radial-gradient(120% 90% at 50% 40%,rgba(40,30,90,.97),rgba(11,10,27,.985));
+    border-radius:0 0 10px 10px}
+  main{max-width:440px;padding:24px;text-align:center}
+  .logo{width:64px;height:64px;border-radius:18px;margin:0 auto 16px;display:grid;place-items:center;
+    background:linear-gradient(135deg,#9a8cff,#d08cff);color:#160e33;box-shadow:0 10px 30px -10px #9a8cff}
+  h1{font:600 30px/1.2 "Segoe UI Variable Display","Segoe UI",system-ui;margin:0 0 8px;letter-spacing:-.01em}
+  p{margin:0 0 22px;color:#a9a3cf}
+  .hint{font-size:13px;margin:22px 0 0;color:#8a84b5}
+  button{font:inherit;font-weight:600;font-size:14px;color:#ece9ff;cursor:pointer;
+    background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);border-radius:12px;padding:10px 18px}
+  button:hover{background:rgba(255,255,255,.14)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <main>
+    <div class="logo"><svg viewBox="0 0 24 24" width="30" height="30"><path fill="currentColor" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm0 4a6 6 0 1 1 0 12 6 6 0 0 1 0-12Zm0 4a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z"/></svg></div>
+    <h1>Сейчас фокус</h1>
+    <p id="text">Этот сайт подождёт до конца блока.</p>
+    <button id="allow">Мне нужно для работы</button>
+    <p class="hint">Переключись на рабочую вкладку сверху — занавес исчезнет сам.</p>
+  </main>
+</div>
+<script>
+  // Занавес поверх отвлекающего окна. Показывает и прячет его программа Focus.
+  const NAMES = { youtube: 'YouTube', instagram: 'Instagram', vk: 'ВКонтакте', telegram: 'Telegram', yandex: 'Яндекс Музыка' };
+  const T = window.__TAURI__;
+  let kind = new URLSearchParams(location.search).get('kind') || '';
+  window.showCurtain = k => {
+    kind = k;
+    document.getElementById('text').textContent = `${NAMES[k] || k || 'Этот сайт'} подождёт до конца блока.`;
+  };
+  document.getElementById('allow').onclick = () => {
+    T?.core?.invoke('allow_distraction', { kind }).catch(() => {});
+    T?.core?.invoke('overlay_hide', { label: 'curtain' }).catch(() => {});
+  };
+  showCurtain(kind);
+</script>
+</body>
+</html>

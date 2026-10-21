@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NZT Focus</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<canvas id="fx" aria-hidden="true"></canvas>
+<div class="grain" aria-hidden="true"></div>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs><linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" style="stop-color:var(--a1)"/><stop offset="1" style="stop-color:var(--a2)"/>
+  </linearGradient></defs>
+</svg>
+<div class="winbar">
+  <button class="icon-btn" id="miniBtn" title="Мини-режим: маленький таймер поверх окон" aria-label="Мини-режим" hidden>
+    <svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true"><path fill="currentColor" d="M19 11h-8v6h8v-6Zm4 8V5a2 2 0 0 0-2-2H3a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h18a2 2 0 0 0 2-2Zm-2 0H3V5h18v14Z"/></svg>
+  </button>
+  <button class="icon-btn" id="pinBtn" title="Поверх всех окон" aria-label="Поверх всех окон" aria-pressed="false">
+    <svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true"><path fill="currentColor" d="M16 9V4h1a1 1 0 0 0 0-2H7a1 1 0 0 0 0 2h1v5a3 3 0 0 1-3 3v2h5.97v7l1 1 1-1v-7H19v-2a3 3 0 0 1-3-3Z"/></svg>
+  </button>
+  <button class="icon-btn" id="openHelp" title="Как пользоваться" aria-label="Как пользоваться">
+    <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm0 18a8 8 0 1 1 0-16 8 8 0 0 1 0 16Zm-1-5h2v2h-2v-2Zm1-10a4 4 0 0 0-4 4h2a2 2 0 1 1 3.1 1.67c-.97.63-2.1 1.37-2.1 3.33h2c0-1 .5-1.36 1.2-1.83A4 4 0 0 0 12 5Z"/></svg>
+  </button>
+  <button class="icon-btn" id="openSettings" title="Настройки" aria-label="Настройки">
+      <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M12 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7Zm7.43-2.53a7.8 7.8 0 0 0 0-1.94l2.11-1.65a.5.5 0 0 0 .12-.64l-2-3.46a.5.5 0 0 0-.6-.22l-2.49 1a7.3 7.3 0 0 0-1.68-.98l-.38-2.65A.5.5 0 0 0 14 2h-4a.5.5 0 0 0-.5.42l-.38 2.65c-.6.25-1.17.58-1.68.98l-2.49-1a.5.5 0 0 0-.6.22l-2 3.46a.5.5 0 0 0 .12.64l2.11 1.65a7.8 7.8 0 0 0 0 1.94l-2.11 1.65a.5.5 0 0 0-.12.64l2 3.46c.13.22.39.3.6.22l2.49-1c.51.4 1.08.73 1.68.98l.38 2.65c.04.24.25.42.5.42h4c.25 0 .46-.18.5-.42l.38-2.65c.6-.25 1.17-.58 1.68-.98l2.49 1c.22.08.47 0 .6-.22l2-3.46a.5.5 0 0 0-.12-.64l-2.11-1.65Z"/></svg>
+    </button>
+</div>
+
+<main>
+
+<!-- Главная: задаём сессию -->
+<section id="home" class="screen">
+  <header class="top">
+    <div>
+      <h1><span class="brand">NZT</span> Focus</h1>
+      <p class="muted small" id="todayLine">Сегодня ещё ни одной сессии</p>
+    </div>
+  </header>
+
+  <label class="field-label" for="task">Над чем работаешь? <span class="muted">необязательно</span></label>
+  <input type="text" id="task" maxlength="80" placeholder="например: глава 3 диплома" autocomplete="off">
+
+  <div class="field-label">Длительность</div>
+  <div class="chips" id="durChips">
+    <button data-min="25">25</button>
+    <button data-min="45">45</button>
+    <button data-min="60">60</button>
+    <button data-min="90">90</button>
+    <button data-min="custom" id="customChip">Своё</button>
+    <button data-min="free" title="Секундомер без жёсткого конца">∞</button>
+  </div>
+  <div id="customRow" class="custom-row" hidden>
+    <input type="range" id="customRange" min="10" max="120" step="5" value="60">
+    <output id="customOut">60 мин</output>
+  </div>
+  <p class="hint" id="durHint"></p>
+
+  <div class="field-label">Фон</div>
+  <div class="chips sound-chips" id="soundChips">
+    <button data-sound="silence">Тишина</button>
+    <button data-sound="entry">Музыка на вход</button>
+    <button data-sound="music">Музыка весь блок</button>
+  </div>
+  <p class="hint sound-hint" id="soundHint"></p>
+
+  <button class="primary big" id="startBtn">Начать фокус</button>
+
+  <div class="card help-card" id="helpCard" hidden>
+    <button class="icon-btn help-close" id="helpCardClose" title="Больше не показывать" aria-label="Больше не показывать">✕</button>
+    <b>Впервые здесь?</b>
+    <p class="small muted">Выбери время и нажми «Начать фокус» — дальше Focus подскажет сам.</p>
+    <button class="ghost tiny" id="helpCardOpen">Подсказки</button>
+  </div>
+
+  <div class="card" id="limitCard" hidden>
+    <p>Это уже <b id="limitN">4</b>-я сессия сегодня. По исследованиям, глубокой работы в день выходит около 4 часов. Остановиться сейчас — нормально.</p>
+  </div>
+
+  <div class="card week">
+    <div class="week-head"><span class="muted small">Неделя</span><span class="small" id="weekTotal"></span></div>
+    <div class="bars" id="bars"></div>
+    <button class="ghost tiny hist-btn" id="openHist">История по дням</button>
+  </div>
+
+  <button class="link small" id="openWhy">Почему 60 минут и перерыв 10?</button>
+</section>
+
+<!-- Фокус -->
+<section id="focus" class="screen" hidden>
+  <div class="phase-tag" id="focusTag">Фокус</div>
+  <h2 class="task-title" id="focusTask"></h2>
+
+  <div class="ring-wrap">
+    <svg class="ring" viewBox="0 0 220 220" aria-hidden="true">
+      <circle class="ring-bg" cx="110" cy="110" r="96"/>
+      <circle class="ring-ticks" cx="110" cy="110" r="84"/>
+      <circle class="ring-fg" id="focusRing" cx="110" cy="110" r="96" stroke="url(#ringGrad)"/>
+      <circle class="ring-head" cx="206" cy="110" r="5"/>
+    </svg>
+    <div class="ring-center">
+      <div class="clock" id="focusClock">60:00</div>
+      <div class="muted small" id="focusSub">осталось</div>
+    </div>
+  </div>
+
+  <div class="music-row" id="musicRow" hidden>
+    <span class="music-note" aria-hidden="true">
+      <svg class="note" viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M12 3v10.55A4 4 0 1 0 14 17V7h4V3h-6Z"/></svg>
+      <span class="eq"><i></i><i></i><i></i><i></i></span>
+    </span>
+    <span class="music-name">
+      <span class="music-title" id="musicTitle">Tabletop Audio</span>
+      <span class="music-sub" id="musicState">играет</span>
+    </span>
+    <button class="icon-btn music-btn like-btn" id="mLike" title="Нравится — сохранить трек" aria-label="Нравится" aria-pressed="false" hidden>
+      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" id="mLikeIcon" d="M16.5 3c-1.74 0-3.41.81-4.5 2.09C10.91 3.81 9.24 3 7.5 3 4.42 3 2 5.42 2 8.5c0 3.78 3.4 6.86 8.55 11.54L12 21.35l1.45-1.32C18.6 15.36 22 12.28 22 8.5 22 5.42 19.58 3 16.5 3Zm-4.4 15.55-.1.1-.1-.1C7.14 14.24 4 11.39 4 8.5 4 6.5 5.5 5 7.5 5c1.54 0 3.04.99 3.57 2.36h1.87C13.46 5.99 14.96 5 16.5 5c2 0 3.5 1.5 3.5 3.5 0 2.89-3.14 5.74-7.9 10.05Z"/></svg>
+    </button>
+    <button class="icon-btn music-btn" id="mToggle" title="Пауза музыки" aria-label="Пауза музыки">
+      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" id="mToggleIcon" d="M6 19h4V5H6v14Zm8-14v14h4V5h-4Z"/></svg>
+    </button>
+    <button class="icon-btn music-btn" id="mNext" title="Следующий трек" aria-label="Следующий трек">
+      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M6 18l8.5-6L6 6v12Zm10-12v12h2V6h-2Z"/></svg>
+    </button>
+    <button class="ghost tiny dive-btn" id="mDive" title="Ещё раз музыка на вход: 2 минуты звучит, к 5-й минуте стихает">Погружение</button>
+    <button class="icon-btn music-btn" id="mShow" title="Открыть сайт и выбрать трек самому" aria-label="Открыть сайт">
+      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M19 19H5V5h7V3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7h-2v7ZM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7Z"/></svg>
+    </button>
+    <label class="music-vol" title="Громкость музыки">
+      <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M3 9v6h4l5 5V4L7 9H3Zm13.5 3A4.5 4.5 0 0 0 14 7.97v8.05A4.47 4.47 0 0 0 16.5 12ZM14 3.23v2.06a7 7 0 0 1 0 13.42v2.06a9 9 0 0 0 0-17.54Z"/></svg>
+      <input type="range" id="mVol" min="5" max="100" step="5" aria-label="Громкость музыки">
+      <output id="mVolOut">30%</output>
+    </label>
+    <p class="music-why" id="musicWhy"></p>
+  </div>
+
+  <div class="banner warn" id="distractBanner" hidden>
+    <div>
+      <b id="distractTitle">YouTube свёрнут</b>
+      <div class="small" id="distractText">Сейчас фокус. Вернёшься к нему после блока.</div>
+    </div>
+    <div class="banner-btns">
+      <button class="ghost tiny" id="distractOk">Ок</button>
+      <button class="ghost tiny" id="distractAllow">Нужно для работы</button>
+    </div>
+  </div>
+
+  <div class="banner" id="microBanner" hidden>
+    <div>
+      <b>Микропауза</b>
+      <div class="small">Отведи взгляд вдаль, расслабь плечи. <span id="microLeft">20</span> с</div>
+    </div>
+    <button class="ghost tiny" id="microSkip">Ок</button>
+  </div>
+
+  <div class="card soft" id="noteCard" hidden>
+    <div class="muted small">Ты остановился на:</div>
+    <div id="noteText"></div>
+  </div>
+
+  <div class="card soft" id="extraHint" hidden>
+    <p class="small">Уже несколько внеплановых перерывов. Похоже, задача тяжёлая — можно сделать сессию короче, это не проигрыш.</p>
+    <button class="ghost tiny" id="shortenBtn">Закончить через 10 минут</button>
+  </div>
+
+  <button class="primary big" id="extraBreakBtn">Перерыв сейчас</button>
+  <div class="actions">
+    <button class="ghost" id="pauseBtn">Пауза</button>
+    <button class="ghost" id="stopBtn">Завершить</button>
+  </div>
+</section>
+
+<!-- Конец фокус-блока -->
+<section id="wrap" class="screen" hidden>
+  <div class="phase-tag" id="wrapTag">Блок завершён</div>
+  <h2 id="wrapTitle">Час прошёл. Время отдохнуть</h2>
+  <p class="muted" id="wrapText">Если ты посреди мысли — допиши её, перерыв подождёт.</p>
+  <div class="overtime" id="overtime" hidden>после конца блока <b id="overtimeVal">+0:00</b></div>
+
+  <label class="field-label" for="wrapNote">Где ты остановился? <span class="muted">одна строка, чтобы легко вернуться</span></label>
+  <input type="text" id="wrapNote" maxlength="120" placeholder="например: дописать вывод к разделу 3.2" autocomplete="off">
+
+  <div class="actions col">
+    <button class="primary big" id="takeBreakBtn">Перерыв 10 мин</button>
+    <button class="ghost" id="extendBtn">Ещё 5 минут — закончить мысль</button>
+    <button class="ghost" id="wrapEndBtn">Закончить на сегодня</button>
+  </div>
+</section>
+
+<!-- Перерыв -->
+<section id="brk" class="screen" hidden>
+  <div class="phase-tag rest" id="brkTag">Перерыв</div>
+  <h2 class="task-title">Отдых без экрана</h2>
+
+  <div class="ring-wrap">
+    <svg class="ring" viewBox="0 0 220 220" aria-hidden="true">
+      <circle class="ring-bg" cx="110" cy="110" r="96"/>
+      <circle class="ring-ticks" cx="110" cy="110" r="84"/>
+      <circle class="ring-fg rest" id="brkRing" cx="110" cy="110" r="96" stroke="url(#ringGrad)"/>
+      <circle class="ring-head" cx="206" cy="110" r="5"/>
+    </svg>
+    <div class="ring-center">
+      <div class="clock" id="brkClock">10:00</div>
+      <div class="muted small">отдыха</div>
+    </div>
+  </div>
+
+  <div class="card soft">
+    <p id="brkIdea" style="margin:0"></p>
+  </div>
+  <p class="muted small center">Телефон и ленты не отдыхают мозг: по исследованиям, такой перерыв утомляет как работа без перерыва.</p>
+
+  <div class="actions">
+    <button class="ghost" id="brkPlus">+5 минут</button>
+    <button class="ghost" id="brkEndBtn">Закончить перерыв</button>
+  </div>
+</section>
+
+<!-- Перерыв окончен -->
+<section id="brkDone" class="screen" hidden>
+  <div class="phase-tag rest">Перерыв окончен</div>
+  <h2 id="doneTitle">Готов продолжить?</h2>
+  <div class="card soft" id="doneNoteCard" hidden>
+    <div class="muted small">Ты остановился на:</div>
+    <div id="doneNote"></div>
+  </div>
+  <div class="actions col">
+    <button class="primary big" id="resumeBtn">Продолжить</button>
+    <button class="ghost" id="moreRestBtn">Ещё 5 минут отдыха</button>
+    <button class="ghost" id="doneEndBtn">Закончить на сегодня</button>
+  </div>
+</section>
+
+</main>
+
+<!-- Мини-режим: маленькая плашка поверх окон -->
+<div id="mini" data-tauri-drag-region hidden>
+  <div class="mini-dot" id="miniDot" data-tauri-drag-region></div>
+  <div class="mini-main" data-tauri-drag-region>
+    <div class="mini-clock" id="miniClock" data-tauri-drag-region>00:00</div>
+    <div class="mini-label" id="miniLabel" data-tauri-drag-region></div>
+  </div>
+  <button class="icon-btn" id="miniPause" title="Пауза" aria-label="Пауза">
+    <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" id="miniPauseIcon" d="M6 19h4V5H6v14Zm8-14v14h4V5h-4Z"/></svg>
+  </button>
+  <button class="icon-btn" id="miniExpand" title="Развернуть" aria-label="Развернуть">
+    <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M21 11V3h-8l3.29 3.29-10 10L3 13v8h8l-3.29-3.29 10-10L21 11Z"/></svg>
+  </button>
+  <div class="mini-bar" aria-hidden="true"><i id="miniProg"></i></div>
+</div>
+
+<!-- Нижние листы -->
+<div class="scrim" id="scrim" hidden></div>
+
+<div class="sheet" id="extraSheet" hidden>
+  <h3>Внеплановый перерыв</h3>
+  <p class="muted small">Таймер сессии встанет на паузу и продолжится после перерыва.</p>
+  <label class="field-label" for="extraNote">Где ты остановился? <span class="muted">необязательно</span></label>
+  <input type="text" id="extraNote" maxlength="120" placeholder="одна строка" autocomplete="off">
+  <div class="field-label">Сколько отдыхаем</div>
+  <div class="chips" id="extraChips">
+    <button data-min="2">2 мин</button>
+    <button data-min="5">5 мин</button>
+    <button data-min="10">10 мин</button>
+  </div>
+  <div class="actions">
+    <button class="ghost" data-close>Отмена</button>
+    <button class="primary" id="extraGo">Начать перерыв</button>
+  </div>
+</div>
+
+<div class="sheet" id="settingsSheet" hidden>
+  <h3>Настройки</h3>
+  <div class="set-title">Оформление</div>
+  <div class="themes" id="themePicker"></div>
+  <div class="set-row">
+    <span>Перерыв после блока</span>
+    <div class="stepper" data-key="breakMin" data-min="5" data-max="20" data-step="1"><button>−</button><output></output><button>+</button></div>
+  </div>
+  <div class="set-row">
+    <span>Длинный перерыв каждые</span>
+    <div class="stepper" data-key="longEvery" data-min="2" data-max="6" data-step="1" data-unit="блока"><button>−</button><output></output><button>+</button></div>
+  </div>
+  <div class="set-row">
+    <span>Длинный перерыв</span>
+    <div class="stepper" data-key="longMin" data-min="15" data-max="45" data-step="5"><button>−</button><output></output><button>+</button></div>
+  </div>
+  <div class="set-row">
+    <span>Предел блока <span class="muted small">с продлениями</span></span>
+    <div class="stepper" data-key="capMin" data-min="60" data-max="150" data-step="10"><button>−</button><output></output><button>+</button></div>
+  </div>
+  <label class="set-row toggle"><span>Микропаузы (взгляд вдаль каждые 20 мин)</span><input type="checkbox" data-key="micro"></label>
+  <label class="set-row toggle"><span>Звук</span><input type="checkbox" data-key="sound"></label>
+  <label class="set-row toggle"><span>Уведомления Windows</span><input type="checkbox" data-key="notify"></label>
+  <label class="set-row toggle"><span>Показывать окно, когда фаза закончилась</span><input type="checkbox" data-key="popup"></label>
+
+  <div class="set-title">Музыка и отвлечения</div>
+  <div class="sound-set">
+    <div class="set-row"><span>Звук в фокусе (музыка Tabletop Audio)</span></div>
+    <div class="chips sound-chips">
+      <button data-sound="silence">Тишина</button>
+      <button data-sound="entry">Музыка на вход</button>
+      <button data-sound="music">Музыка весь блок</button>
+    </div>
+    <p class="hint small sound-hint"></p>
+  </div>
+  <label class="set-row toggle"><span>Только спокойные треки</span><input type="checkbox" data-key="musicCalm"></label>
+  <div class="set-row">
+    <span>Громкость</span>
+    <input type="range" id="musicVol" min="5" max="100" step="5" class="vol">
+  </div>
+  <div class="liked-box">
+    <div class="set-row liked-head"><span>Понравившиеся треки</span><b class="muted small" id="likedCount"></b></div>
+    <ul class="liked" id="likedList"></ul>
+  </div>
+  <label class="set-row toggle"><span>Сворачивать отвлекающие сайты во время фокуса</span><input type="checkbox" data-key="guard"></label>
+  <div class="sites-box" id="sitesBox">
+    <div class="set-row sites-head"><span>Что сворачивать</span><b class="muted small" id="sitesCount"></b></div>
+    <ul class="sites" id="sitesList"></ul>
+    <form class="site-add" id="siteAdd" autocomplete="off">
+      <input type="text" id="siteInput" placeholder="Свой сайт, например twitch.tv" aria-label="Адрес сайта" spellcheck="false">
+      <button type="submit" class="ghost">Добавить</button>
+    </form>
+    <p class="hint small" id="siteHint"></p>
+  </div>
+  <label class="set-row toggle"><span>Закрывать приложение Яндекс Музыки при старте</span><input type="checkbox" data-key="closeYandex"></label>
+  <p class="muted small credit">Музыка — <b>Tabletop Audio</b> (tabletopaudio.com), бесплатно для личного использования. Проект живёт на поддержке слушателей через Patreon.</p>
+  <div class="actions">
+    <button class="link small" id="clearHist">Очистить историю</button>
+    <button class="primary" data-close>Готово</button>
+  </div>
+</div>
+
+<div class="sheet" id="histSheet" hidden>
+  <h3>История по дням</h3>
+  <p class="muted small" id="histSummary"></p>
+  <ul class="days" id="daysList"></ul>
+  <div class="actions"><button class="primary" data-close>Закрыть</button></div>
+</div>
+
+<div class="sheet" id="onTopSheet" hidden>
+  <h3>Отключить «поверх всех окон»?</h3>
+  <p class="muted small">Focus перестанет быть виден поверх других программ. Его станет легко потерять из виду и забыть про таймер.</p>
+  <div class="actions">
+    <button class="primary" data-close>Оставить поверх</button>
+    <button class="ghost" id="onTopOff">Да, отключить</button>
+  </div>
+</div>
+
+<div class="sheet help" id="helpSheet" hidden>
+  <h3>Как пользоваться</h3>
+  <ul class="tips">
+    <li><span class="tip-ico"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M8 5v14l11-7Z"/></svg></span><div><b>Выбери время и нажми «Начать»</b><span>60 минут — золотая середина. Окно можно закрыть, таймер идёт.</span></div></li>
+    <li><span class="tip-ico"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M2 21h18v-2H2v2ZM20 8h-2V5h2v3Zm0-5H4v10a4 4 0 0 0 4 4h6a4 4 0 0 0 4-4v-3h2a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2Z"/></svg></span><div><b>Устал — «Перерыв сейчас»</b><span>Прервали — «Пауза» или пробел.</span></div></li>
+    <li><span class="tip-ico"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M12 22a2 2 0 0 0 2-2h-4a2 2 0 0 0 2 2Zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4a1.5 1.5 0 0 0-3 0v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2Z"/></svg></span><div><b>Блок кончится — Focus позовёт</b><span>Не дописал мысль? «Ещё 5 минут».</span></div></li>
+    <li><span class="tip-ico"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M16 9V4h1a1 1 0 0 0 0-2H7a1 1 0 0 0 0 2h1v5a3 3 0 0 1-3 3v2h5.97v7l1 1 1-1v-7H19v-2a3 3 0 0 1-3-3Z"/></svg></span><div><b>Всегда на виду</b><span>Булавка — поверх всех окон, значок окошка — мини-плашка.</span></div></li>
+    <li><span class="tip-ico"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M12 3v10.55A4 4 0 1 0 14 17V7h4V3h-6Z"/></svg></span><div><b>Музыка на вход</b><span>2 минуты спокойной музыки, к 5-й минуте — тишина. Можно выбрать тишину или музыку на весь блок.</span></div></li>
+    <li><span class="tip-ico"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20ZM4 12a8 8 0 0 1 12.9-6.32L5.68 16.9A7.93 7.93 0 0 1 4 12Zm8 8a7.93 7.93 0 0 1-4.9-1.68L18.32 7.1A8 8 0 0 1 12 20Z"/></svg></span><div><b>YouTube и соцсети сворачиваются</b><span>«Нужно для работы» — разрешить до конца блока.</span></div></li>
+    <li><span class="tip-ico"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M5 9.2h3V19H5V9.2ZM10.6 5h2.8v14h-2.8V5Zm5.6 8H19v6h-2.8v-6Z"/></svg></span><div><b>График — твоя неделя</b><span>Цвет — номер блока за день. Подробнее — «История по дням».</span></div></li>
+  </ul>
+  <button class="link small" id="helpToWhy">Почему именно так — исследования</button>
+  <div class="actions"><button class="primary" data-close>Понятно</button></div>
+</div>
+
+<div class="sheet" id="whySheet" hidden>
+  <h3>Почему так устроено</h3>
+  <ul class="why">
+    <li><b>60 минут → 10–15 минут отдыха.</b> Такую норму для работы за экраном дают японский Минздрав, Минтруд США и британская HSE. Испытания NIOSH: отдых каждый час снижает усталость без потери выработки.</li>
+    <li><b>Перерыв длиннее 5 минут.</b> Метаанализ 2022 года (2 335 человек): короткие паузы бодрят, но для сложной работы пользы больше от перерывов подлиннее.</li>
+    <li><b>Отдых без телефона.</b> Перерыв с телефоном истощает так же, как отсутствие перерыва.</li>
+    <li><b>Мягкий конец блока.</b> Обрывать мысль посреди задачи дороже всего — поэтому можно дописать 5 минут, но не бесконечно.</li>
+    <li><b>Записка «где я остановился».</b> Помогает отпустить задачу на перерыве и быстрее вернуться.</li>
+    <li><b>Около 4 часов глубокой работы в день.</b> Ориентир, а не правило: дальше отдача падает.</li>
+  </ul>
+  <p class="muted small">Подробности — в отчёте «Фокус и перерывы в работе».</p>
+  <div class="actions"><button class="primary" data-close>Понятно</button></div>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<script src="theme.js"></script>
+<script src="boot.js"></script>
+</body>
+</html>

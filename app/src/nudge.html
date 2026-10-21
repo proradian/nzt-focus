@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Focus</title>
+<style>
+  html,body{margin:0;height:100%;background:transparent;overflow:hidden;
+    font:15px/1.4 "Segoe UI Variable Text","Segoe UI",system-ui,sans-serif;-webkit-user-select:none;user-select:none}
+  .card{position:absolute;inset:8px;display:flex;align-items:center;gap:14px;padding:0 14px 0 16px;
+    border-radius:18px;color:#ece9ff;background:rgba(18,16,40,.94);border:1px solid rgba(255,255,255,.12);
+    box-shadow:0 12px 34px rgba(0,0,0,.45);opacity:0;transform:translateY(-8px);transition:opacity .25s,transform .25s}
+  .card.on{opacity:1;transform:none}
+  .dot{flex:none;width:36px;height:36px;border-radius:11px;display:grid;place-items:center;
+    background:linear-gradient(135deg,#9a8cff,#d08cff);color:#160e33}
+  .text{flex:1;min-width:0}
+  .text b{display:block;font-size:15px}
+  .text span{display:block;font-size:13px;color:#a9a3cf;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  button{flex:none;font:inherit;font-size:13px;font-weight:600;color:#ece9ff;cursor:pointer;
+    background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);border-radius:10px;padding:7px 11px}
+  button:hover{background:rgba(255,255,255,.14)}
+</style>
+</head>
+<body>
+<div class="card" id="card">
+  <div class="dot"><svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm0 4a6 6 0 1 1 0 12 6 6 0 0 1 0-12Zm0 4a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z"/></svg></div>
+  <div class="text"><b id="title">Сейчас фокус</b><span id="sub"></span></div>
+  <button id="allow">Нужно для работы</button>
+</div>
+<script>
+  // Плашка поверх экрана: показывается программой Focus. Либо прячется сама через 6 секунд,
+  // либо (sticky) висит, пока окно с сайтом на экране, и её прячет программа.
+  const NAMES = { youtube: 'YouTube', instagram: 'Instagram', vk: 'ВКонтакте', telegram: 'Telegram', yandex: 'Яндекс Музыка' };
+  const T = window.__TAURI__;
+  let kind = new URLSearchParams(location.search).get('kind') || '';
+  let timer = null, hideTimer = null, sticky = new URLSearchParams(location.search).get('sticky') === 'true';
+
+  function hide() {
+    document.getElementById('card').classList.remove('on');
+    clearTimeout(hideTimer);
+    hideTimer = setTimeout(() => T?.core?.invoke('overlay_hide', { label: 'nudge' }).catch(() => {}), 260);
+  }
+  // sticky — висеть, пока окно с сайтом на экране; программа сама спрячет плашку, когда его закроют.
+  window.showNudge = (k, isSticky = false) => {
+    kind = k; sticky = isSticky;
+    clearTimeout(hideTimer);            // вернулись быстро — не прятать окно после нового показа
+    document.getElementById('sub').textContent = `${NAMES[k] || k || 'Этот сайт'} подождёт до конца блока`;
+    requestAnimationFrame(() => document.getElementById('card').classList.add('on'));
+    clearTimeout(timer);
+    if (!sticky) timer = setTimeout(hide, 6000);
+  };
+  window.hideNudge = () => { clearTimeout(timer); hide(); };
+  document.getElementById('allow').onclick = () => {
+    T?.core?.invoke('allow_distraction', { kind }).catch(() => {});
+    hide();
+  };
+  document.getElementById('card').onmouseenter = () => clearTimeout(timer);
+  document.getElementById('card').onmouseleave = () => { if (!sticky) timer = setTimeout(hide, 2500); };
+  showNudge(kind, sticky);
+</script>
+</body>
+</html>
