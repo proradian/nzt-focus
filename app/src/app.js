@@ -575,6 +575,8 @@ function pickIdea(kind) {
 
 // ---------- Отрисовка ----------
 function render() {
+  // Название правили, и тут сменилась фаза — сохраняем то, что успели вписать.
+  if (!$('focusTaskInput').hidden) saveTask();
   show(PHASE_SCREEN[st.phase] || 'home');
   closeSheets();
   const live = st.phase === 'focus' || st.phase === 'break';
@@ -584,7 +586,7 @@ function render() {
   $('openSettings').hidden = st.phase !== 'idle';
   if (st.phase === 'idle') renderHome();
   if (st.phase === 'focus') {
-    $('focusTask').textContent = st.task || 'Фокус-сессия';
+    renderTaskTitle();
     $('noteCard').hidden = !st.note;
     $('noteText').textContent = st.note || '';
     $('microBanner').hidden = true;
@@ -967,6 +969,31 @@ $('extraGo').onclick = () => {
   hideMicro();
   startBreak('extra', settings.extraMin);
 };
+
+// Название фокуса можно поменять прямо во время блока: оно попадёт в историю, мини-плашку и следующие блоки.
+// Название выглядит как поле ввода — видно, что по нему можно кликнуть. Пустое — бледная подсказка.
+function renderTaskTitle() {
+  $('focusTask').textContent = st.task || 'Над чем работаешь?';
+  $('focusTask').classList.toggle('empty', !st.task);
+}
+function editTask(on) {
+  $('taskRow').hidden = on;
+  $('focusTaskInput').hidden = !on;
+  if (on) { const i = $('focusTaskInput'); i.value = st.task || ''; i.focus(); i.select(); }
+}
+function saveTask() {
+  st.task = $('focusTaskInput').value.trim();
+  settings.lastTask = st.task; saveSettings(); save();
+  renderTaskTitle();
+  editTask(false); renderMini();
+}
+$('focusTask').onclick = () => editTask(true);
+$('focusTaskInput').onkeydown = e => {
+  if (e.key === 'Enter') saveTask();
+  if (e.key === 'Escape') editTask(false);
+};
+// Escape уже спрятал поле — тогда blur ничего не сохраняет.
+$('focusTaskInput').onblur = () => { if (!$('focusTaskInput').hidden) saveTask(); };
 
 $('shortenBtn').onclick = () => {
   st.planMin = Math.ceil(elapsed() / MIN) + 10; st.extendMin = 0; save();
