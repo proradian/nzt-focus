@@ -23,7 +23,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/screenshots/focus.png" width="300" alt="Фокус: таймер, задача и музыка на вход">
+  <img src="docs/screenshots/focus.gif" width="300" alt="Фокус: таймер, задача, музыка на вход и переливающийся фон (ускорено)">
   &nbsp;
   <img src="docs/screenshots/break.png" width="300" alt="Перерыв: отдых без экрана">
 </p>

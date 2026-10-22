@@ -13,7 +13,7 @@ A research-based focus timer for Windows, built with Tauri 2.
 </p>
 
 <p align="center">
-  <img src="docs/screenshots/focus.png" width="300" alt="Focus: timer, task and entry music">
+  <img src="docs/screenshots/focus.gif" width="300" alt="Focus: timer, task, entry music and the flowing background (sped up)">
   &nbsp;
   <img src="docs/screenshots/break.png" width="300" alt="Break: rest away from the screen">
 </p>
