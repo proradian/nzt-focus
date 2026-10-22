@@ -28,7 +28,7 @@ A research-based focus timer for Windows, built with Tauri 2.
 
 ## Based on research
 
-See the [list of studies behind each feature](docs/research/SOURCES.md) (in Russian, with links to the papers). The reports in [`docs/research`](docs/research) cover focus length, breaks and micro-breaks, and background sound. The short version: music without lyrics lifts mood and helps you get started, but complex thinking goes better in silence.
+See the [list of studies behind each feature](docs/research/SOURCES.md) (in Russian, with links to the papers). The reports in [`docs/research`](docs/research) cover focus length, breaks and micro-breaks, and background sound. The short version: music without lyrics lifts mood and makes the start more pleasant, but complex thinking goes better in silence.
 
 ## Safety
 
