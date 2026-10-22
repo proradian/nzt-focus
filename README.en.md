@@ -26,7 +26,7 @@ A research-based focus timer for Windows, built with Tauri 2.
 - **Honest time tracking.** When a block ends, the timer stops. Sleep and shutdown do not count as work.
 - **Distraction blocking.** During a block, Focus minimizes YouTube, VK, Instagram, Telegram Web and Yandex Music, and covers the window if you bring it back. You can switch off built-in sites and add your own by domain. In browsers the site is detected by the tab's address.
 - **Entry music.** By default a block starts with calm instrumental music from Tabletop Audio: it plays for 2 minutes, fades out evenly and is silent by minute 5. You can also choose silence or music for the whole block.
-- **Living background** that slowly flows across the window, plus daily history and a weekly chart.
+- **Living background** that slowly flows across the window, a weekly chart and a day timeline that shows each block, whether it was finished or cut short, and the breaks between blocks.
 
 ## Based on research
 
@@ -107,8 +107,9 @@ SOUND
 - Default volume 30%, slider in settings.
 
 HISTORY
-- Save every block to localStorage: date, task, minutes.
-- Home screen: blocks and minutes today and a 7-day chart — bars per day labelled with hours.
+- Save every block to localStorage: start, end, task, focus minutes and planned minutes.
+- Home screen: blocks and minutes today, a day timeline and a 7-day chart — bars per day labelled with hours.
+- Day timeline: blocks by clock time with the breaks between them labelled in minutes; a block cut short of its plan is hatched. Clicking a day shows a list: block times, finished or cut short, and the break before the next block.
 - After 4 hours of focus in a day, a gentle "that's enough for today" hint: a guideline, not a ban.
 
 LIVING BACKGROUND
