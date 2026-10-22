@@ -274,6 +274,18 @@ const I18N = (() => {
     'Ориентир, а не правило: примерно столько в день занимаются лучшие музыканты.': 'A guideline, not a rule: roughly how much the best musicians practise a day.',
     'Подробности — в отчёте «Фокус и перерывы в работе».': 'Details are in the report “Focus and breaks at work”.',
 
+    "Сегодня уже <b>{time}</b> фокуса. Дальше хуже всего идут трудные задачи и решения, а почта и рутина — нормально. Можно перейти на лёгкое или закончить: оба варианта нормальны.": "Already <b>{time}</b> of focus today. From here on, hard tasks and decisions suffer most, while email and routine work are fine. You can switch to something easy or stop: both are fine.",
+    "Сегодня уже 4 ч фокуса. Дальше хуже всего идут трудные задачи и решения, а почта и рутина — нормально. Можно перейти на лёгкое или закончить: оба варианта нормальны.": "Already 4 h of focus today. From here on, hard tasks and decisions suffer most, while email and routine work are fine. You can switch to something easy or stop: both are fine.",
+    "Почему 60 минут и перерыв 10–15?": "Why 60 minutes and a 10–15 minute break?",
+    "Больше 2 часов фокуса без длинного отдыха — поэтому перерыв на 5 минут дольше.": "More than 2 hours of focus without a long rest — so the break is 5 minutes longer.",
+    "Перерыв после часа работы": "Break after an hour of work",
+    "после 2 ч подряд +5": "+5 after 2 h in a row",
+    "Перерыв по длине блока, после 2 часов — дольше.": "Break sized to the block, longer after 2 hours.",
+    "После 45 минут работы перерыв короче, после 90 — длиннее. Японский эксперимент 1987 года: если за экраном больше 2 часов в день, после каждого часа нужно от 15 минут отдыха.": "After 45 minutes of work the break is shorter, after 90 it is longer. A 1987 Japanese experiment: with more than 2 hours of screen work a day, each hour needs at least 15 minutes of rest.",
+    "Длинный перерыв после 3 блоков подряд.": "A long break after 3 blocks in a row.",
+    "Перерыв 20–30 минут перекрывает спад примерно за 2 часа работы. Если между блоками прошло столько же (обед, дела), это уже длинный отдых — счёт начинается заново.": "A 20–30 minute break offsets the decline from about 2 hours of work. If that much time passed between blocks (lunch, errands), it already counts as a long rest and the count starts over.",
+    "Ориентир, а не предел: к концу долгого дня хуже всего идут трудные задачи и решения, а простые — нормально. Поэтому самое трудное лучше ставить в первые блоки.": "A guideline, not a limit: late in a long day, hard tasks and decisions suffer most while simple ones are fine. So put the hardest work in the first blocks.",
+
     // Плашка и занавес поверх отвлекающих сайтов
     'Сейчас фокус': 'Focus time',
     'Этот сайт': 'This site',

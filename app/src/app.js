@@ -31,7 +31,8 @@ fx?.setTheme(settings.theme);
 // Поэтому «Очистить историю» запоминает время очистки (settings.histClearedAt): старые записи
 // из кэша движка после этого не возвращаются, даже если он не успел записаться на диск.
 let history = read(K_HIST, []).filter(h => h && !h.deleted && h.min > 0);
-const IDLE = { phase: 'idle', cycle: 0, day: '' };
+// Серия — работа с последнего длинного отдыха: cycle — сколько в ней полных блоков, seriesMin — минут фокуса.
+const IDLE = { phase: 'idle', cycle: 0, seriesMin: 0 };
 let st = read(K_STATE, IDLE);
 const save = () => write(K_STATE, st);
 
@@ -450,12 +451,15 @@ function chosenMinutes() {
   return +settings.dur;
 }
 
-function rollDay() {
-  if (st.day !== dayKey()) { st.day = dayKey(); st.cycle = 0; }
-}
+// Пауза между блоками не короче длинного перерыва — это и есть длинный отдых, даже если кнопку перерыва
+// не нажимали: перерыв 20–30 минут перекрывает спад примерно за 2 часа работы (Sievertsen 2016).
+// Поэтому после обеда или долгого отсутствия блоки считаются заново, а не продолжают утренний счёт.
+const lastBlockEnd = () => history.reduce((t, h) => Math.max(t, h.ts), 0);
+const resetSeries = () => { st.cycle = 0; st.seriesMin = 0; };
 
 function startFocus(planMin, task, note) {
-  initAudio(); rollDay();
+  initAudio();
+  if (now() - lastBlockEnd() >= settings.longMin * MIN) resetSeries();
   st = { ...st, phase: 'focus', task, note: note || '', planMin, basePlan: planMin, extendMin: 0, acc: 0, runFrom: now(), entryFrom: 0,
          micro: [], extraCount: 0, brk: null, wrapAt: null, auto: 0, seen: now() };
   save(); render();
@@ -472,12 +476,17 @@ function recordBlock() {
     history.push({ ts: st.wrapAt || now(), task: st.task || '', min });
     if (history.length > 2000) history = history.slice(-2000);
     write(K_HIST, history);
+    // Блок идёт в серию, даже если после него не было перерыва («Завершить» и сразу новый блок).
+    // Но к длинному перерыву приближает только блок хотя бы на половину плана: брошенный через 3 минуты — нет.
+    st.seriesMin = (st.seriesMin || 0) + min;
+    const plan = (st.basePlan !== undefined ? st.basePlan : st.planMin) ?? 60;
+    if (min >= plan / 2) st.cycle++;
   }
   return min;
 }
 
 function goHome(msg) {
-  st = { ...IDLE, cycle: st.cycle, day: st.day };
+  st = { ...IDLE, cycle: st.cycle, seriesMin: st.seriesMin };
   save(); render();
   if (msg) toast(msg);
 }
@@ -498,10 +507,10 @@ function enterWrap() {
   popup();
 }
 
-function startBreak(kind, min) {
+function startBreak(kind, min, tired = false) {
   const total = min * MIN;
   st.phase = 'break';
-  st.brk = { kind, endAt: now() + total, totalMs: total, idea: pickIdea(kind) };
+  st.brk = { kind, endAt: now() + total, totalMs: total, idea: pickIdea(kind), tired };
   save(); render();
 }
 
@@ -562,16 +571,14 @@ function render() {
       ? tr('{n} {minutes} фокуса. Пора отдохнуть', { n: m, minutes: plural(m, 'минута', 'минуты', 'минут') })
       : tr('Блок завершён. Время отдохнуть');
     $('wrapNote').value = '';
-    const kind = nextBreakKind();
-    $('takeBreakBtn').textContent = kind === 'long'
-      ? tr('Длинный перерыв {n} мин', { n: settings.longMin })
-      : tr('Перерыв {n} мин', { n: settings.breakMin });
+    $('takeBreakBtn').textContent = breakLabel(breakPlan(wrapMin()));
     setTimeout(() => $('wrapNote').focus(), 50);
   }
   if (st.phase === 'break') {
     const b = st.brk;
     const lbl = tr({ regular: 'Перерыв', long: 'Длинный перерыв', extra: 'Внеплановый перерыв' }[b.kind]);
     $('brkTag').textContent = tr('{label} · {n} мин', { label: lbl, n: Math.round(b.totalMs / MIN) });
+    $('brkWhy').hidden = !b.tired;
     // Идея — русский текст (ключ перевода), у старых записей — строка, у новых — части.
     $('brkIdea').textContent = [].concat(b.idea || []).map(x => tr(x)).join('');
   }
@@ -593,7 +600,21 @@ function render() {
   tick();
 }
 
-function nextBreakKind() { return (st.cycle + 1) >= settings.longEvery ? 'long' : 'regular'; }
+// Перерыв после блока длиной blockMin минут.
+// Обычный — breakMin на каждый час работы: короткому блоку меньше, длинному больше (30/5 и 60/10
+// восстанавливали одинаково, Kopardekar & Mital 1994). После 2 часов фокуса без длинного отдыха —
+// на 5 минут дольше: при работе за экраном больше 2 часов после каждого часа нужно от 15 минут (Horie 1987).
+const TIRED_MIN = 120;
+function breakPlan(blockMin) {
+  if ((st.cycle + 1) >= settings.longEvery) return { kind: 'long', min: settings.longMin, tired: false };
+  const tired = (st.seriesMin || 0) + blockMin >= TIRED_MIN;
+  const perHour = settings.breakMin + (tired ? 5 : 0);
+  const min = Math.min(settings.longMin, Math.max(5, Math.round(perHour * blockMin / 60)));
+  return { kind: 'regular', min, tired };
+}
+// Сколько минут засчитается блоку, если нажать «Перерыв» сейчас (с дописанной мыслью).
+const wrapMin = () => Math.round((elapsed() + (sinceWrap() <= GRACE ? sinceWrap() : 0)) / MIN);
+const breakLabel = p => p.kind === 'long' ? tr('Длинный перерыв {n} мин', { n: p.min }) : tr('Перерыв {n} мин', { n: p.min });
 
 function setRing(el, frac) {
   const f = Math.max(0, Math.min(1, frac));
@@ -627,9 +648,9 @@ function catchUpGap(t) {
 }
 
 function autoCloseBlock() {
+  const { kind } = breakPlan(Math.round(elapsed() / MIN));
   const m = recordBlock();
-  const kind = nextBreakKind();
-  st.cycle = kind === 'long' ? 0 : st.cycle + 1;
+  if (kind === 'long') resetSeries();
   st.phase = 'brkDone';
   st.brk = { kind };
   st.auto = m;
@@ -678,6 +699,7 @@ function tick() {
     if (away >= AUTO) { autoCloseBlock(); return; }
     $('overtime').hidden = away < 30000;
     $('overtimeVal').textContent = '+' + mmss(away);
+    $('takeBreakBtn').textContent = breakLabel(breakPlan(wrapMin()));
     $('extendBtn').disabled = elapsed() >= capMs();
     $('wrapText').textContent = elapsed() >= capMs()
       ? tr('Это уже {n} минут подряд — дальше внимание заметно падает. Лучше отдохнуть.', { n: Math.round(elapsed() / MIN) })
@@ -762,7 +784,7 @@ function renderHome() {
   // Ориентир — часы фокуса, а не число блоков: блоки бывают и по 15 минут.
   lim.hidden = tMin < 240;
   if (!lim.hidden) lim.querySelector('p').innerHTML =
-    tr('Сегодня уже <b>{time}</b> фокуса. По исследованиям, глубокой работы в день выходит около 4 часов — это ориентир, а не правило. Остановиться сейчас — нормально.', { time: hm(tMin) });
+    tr('Сегодня уже <b>{time}</b> фокуса. Дальше хуже всего идут трудные задачи и решения, а почта и рутина — нормально. Можно перейти на лёгкое или закончить: оба варианта нормальны.', { time: hm(tMin) });
 
   // Неделя
   const days = [];
@@ -906,11 +928,10 @@ $('extendBtn').onclick = () => {
 $('takeBreakBtn').onclick = () => {
   st.note = $('wrapNote').value.trim();
   creditWrap();
+  const plan = breakPlan(Math.round(elapsed() / MIN));
   recordBlock();
-  rollDay();
-  const kind = nextBreakKind();
-  st.cycle = kind === 'long' ? 0 : st.cycle + 1;
-  startBreak(kind, kind === 'long' ? settings.longMin : settings.breakMin);
+  if (plan.kind === 'long') resetSeries();
+  startBreak(plan.kind, plan.min, plan.tired);
 };
 $('wrapNote').onkeydown = e => { if (e.key === 'Enter') $('takeBreakBtn').click(); };
 $('wrapEndBtn').onclick = () => {
@@ -1120,7 +1141,7 @@ win?.onCloseRequested(async e => {
   if (st.phase === 'break' && now() - st.brk.endAt > 60 * MIN) {
     // Внеплановый перерыв прервал блок, и его минуты ещё не в истории — сохраняем их на момент начала перерыва.
     if (st.brk.kind === 'extra') { st.wrapAt = st.brk.endAt - st.brk.totalMs; recordBlock(); }
-    st = { ...IDLE, cycle: st.cycle, day: st.day };
+    st = { ...IDLE, cycle: st.cycle, seriesMin: st.seriesMin };
   }
   save();
   I18N.set(settings.lang);   // файл настроек главный: язык берём из него, а не из кэша движка
