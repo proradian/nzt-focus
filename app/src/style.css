@@ -255,8 +255,9 @@ input[type=text].task-input{margin-top:14px;padding:10px 14px;font-size:18px;fon
 .music-row .music-btn{width:32px;height:32px;padding:0;border-radius:10px;flex:none}
 .music-row .music-btn:hover{background:var(--glass-hi);color:var(--text)}
 .music-row.off .music-note{opacity:.4}
-/* Музыка на вход: только название трека, кнопка входа, ссылка на сайт и пояснение */
-.music-row.entry #mLike,.music-row.entry #mToggle,.music-row.entry #mNext,.music-row.entry .music-vol{display:none}
+/* Музыка на вход: только название трека, кнопка входа, ссылка на сайт и пояснение.
+   Пока вход звучит (.live), трек можно сменить; после него кнопки нет — она включила бы музыку в тишине. */
+.music-row.entry #mLike,.music-row.entry #mToggle,.music-row.entry:not(.live) #mNext,.music-row.entry .music-vol{display:none}
 /* Пояснение внизу панели музыки */
 .music-why{flex-basis:100%;margin:0;padding:0 4px 0 8px;font-size:12px;line-height:1.35;color:var(--muted)}
 /* Кнопка входа — только в режиме «Музыка на вход» */
