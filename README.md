@@ -22,7 +22,7 @@
 
 ## На чём основано
 
-Отчёты лежат в [`docs/research/reports`](docs/research/reports), заметки, из которых они собраны, — в [`docs/research/notes`](docs/research/notes):
+**[Список исследований и что из них взято в таймер](docs/research/SOURCES.md).** Отчёты лежат в [`docs/research/reports`](docs/research/reports), заметки, из которых они собраны, — в [`docs/research/notes`](docs/research/notes):
 
 - [Фокус и перерывы в работе](docs/research/reports/Фокус%20и%20перерывы%20в%20работе.md): длительность фокуса, перерывы и микропаузы.
 - [Музыка и звук при работе](docs/research/reports/Музыка%20и%20звук%20при%20работе.md). Вывод: для сложного мышления лучше тишина, а музыка без слов вредит меньше всего и помогает настроению и рутине.
