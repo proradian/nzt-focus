@@ -33,7 +33,8 @@ const saveSettings = () => write(K_SET, settings);
 const fx = window.FocusFx;
 fx?.setTheme(settings.theme);
 
-// [{ts, task, min}]. История хранится в двух местах, которые при запуске объединяются (boot.js).
+// [{ts, task, min, from, plan}]: ts — конец блока, from — начало (у старых записей его нет),
+// plan — сколько минут было задумано (null — без таймера). История хранится в двух местах, которые при запуске объединяются (boot.js).
 // Поэтому «Очистить историю» запоминает время очистки (settings.histClearedAt): старые записи
 // из кэша движка после этого не возвращаются, даже если он не успел записаться на диск.
 let history = read(K_HIST, []).filter(h => h && !h.deleted && h.min > 0);
@@ -477,19 +478,22 @@ function startFocus(planMin, task, note, blockNo = 1) {
   if (seriesFresh()) resetSeries();
   const session = blockNo === 1 ? { blocksPlan: settings.blocks, sessionMin: 0 } : {};
   st = { ...st, ...session, phase: 'focus', task, note: note || '', planMin, basePlan: planMin, extendMin: 0, acc: 0, runFrom: now(), entryFrom: 0,
+         startedAt: now(), pausedAt: null,
          micro: [], extraCount: 0, brk: null, wrapAt: null, auto: 0, seen: now(), blockNo, doneAt: null };
   save(); render();
   onFocusStart();
 }
 
-function pauseFocus() { if (st.runFrom) { st.acc = elapsed(); st.runFrom = null; } }
-function resumeFocus() { if (!st.runFrom) st.runFrom = now(); }
+function pauseFocus() { if (st.runFrom) { st.acc = elapsed(); st.runFrom = null; st.pausedAt = now(); } }
+function resumeFocus() { if (!st.runFrom) { st.runFrom = now(); st.pausedAt = null; } }
 
 function recordBlock() {
   const min = Math.round(elapsed() / MIN);
   if (min >= 1) {
     // Дата — момент конца блока, а не нажатия кнопки: блок, закрытый после выключения ПК, остаётся в своём дне.
-    history.push({ ts: st.wrapAt || now(), task: st.task || '', min });
+    // Блок, завершённый с паузы, кончился, когда началась пауза. Начало и план нужны ленте дня.
+    const ts = st.wrapAt || (st.runFrom ? now() : st.pausedAt || now());
+    history.push({ ts, task: st.task || '', min, from: st.startedAt || undefined, plan: st.basePlan ?? null });
     if (history.length > 2000) history = history.slice(-2000);
     write(K_HIST, history);
     // Блок идёт в серию, даже если после него не было перерыва («Завершить» и сразу новый блок).
@@ -513,7 +517,7 @@ function goHome(msg) {
 // блок закрывается сам, ровно на плановом времени.
 const GRACE = 10 * MIN, AUTO = 15 * MIN;
 const sinceWrap = () => now() - (st.wrapAt || now());
-function creditWrap() { const away = sinceWrap(); if (away <= GRACE) st.acc += away; }
+function creditWrap() { const away = sinceWrap(); if (away <= GRACE) { st.acc += away; st.wrapAt += away; } }
 
 function enterWrap() {
   st.acc = targetMs(); st.runFrom = null; st.wrapAt = now();
@@ -684,7 +688,7 @@ function catchUpGap(t) {
   if (gap < 2 * MIN || st.phase !== 'focus' || !st.runFrom) return false;
   const accBefore = st.acc, runFrom = st.runFrom;
   st.acc += Math.max(0, stoppedAt - runFrom);
-  st.runFrom = null;
+  st.runFrom = null; st.pausedAt = stoppedAt;
   if (st.acc >= targetMs()) {
     // Блок успел закончиться до выключения — закрываем его на плановом времени.
     st.wrapAt = runFrom + (targetMs() - accBefore);
@@ -719,6 +723,8 @@ function tick() {
     native.title('NZT Focus'); native.tray('NZT Focus'); native.progress('none', 0);
     // Время конца сессии в подсказке сдвигается вместе с часами.
     native.once('blocksHint', Math.floor(t / MIN), renderBlocks);
+    const ago = sinceLastText();
+    if ($('todayAgo').textContent !== ago) $('todayAgo').textContent = ago;
     return;
   }
 
@@ -842,6 +848,10 @@ function renderHome() {
   $('todayLine').textContent = today.length
     ? tr('Сегодня: {n} {blocks} · {time}', { n: today.length, blocks: plural(today.length, 'блок', 'блока', 'блоков'), time: hm(tMin) })
     : tr('Сегодня ещё ни одного блока');
+  const spans = daySpans(today.sort((a, b) => a.ts - b.ts));
+  $('todayCard').hidden = !today.length;
+  $('todayStrip').replaceChildren(...(today.length ? [dayStrip(spans)] : []));
+  $('todayAgo').textContent = sinceLastText();
   const lim = $('limitCard');
   // Ориентир — часы фокуса, а не число блоков: блоки бывают и по 15 минут.
   lim.hidden = tMin < 240;
@@ -898,11 +908,129 @@ function renderWeek(days) {
     const last = stack.lastElementChild, g = Math.min(1, d.min / GOAL_MIN);
     if (d.min) last.style.boxShadow = `0 0 ${(4 + 14 * g).toFixed(0)}px -1px color-mix(in srgb, var(--a2) ${Math.round(15 + 70 * g)}%, transparent)`;
     const s = document.createElement('span'); s.textContent = d.label;
+    if (d.min) { el.classList.add('open'); el.title = tr('Блоки и перерывы этого дня'); el.onclick = () => openDay(d.key); }
     el.append(v, stack, s); box.append(el);
   });
 }
 
 const timeOf = ts => new Date(ts).toLocaleTimeString(I18N.locale(), { hour: '2-digit', minute: '2-digit' });
+
+// ---------- Лента дня: блоки по времени и перерывы между ними ----------
+// Начало блока. У записей старых версий его нет — считаем от конца назад по минутам фокуса.
+const blockFrom = h => h.from || h.ts - h.min * MIN;
+const dayBlocks = key => history.filter(h => dayKey(h.ts) === key).sort((a, b) => a.ts - b.ts);
+
+// Блоки дня вперемешку с промежутками. Начало не раньше конца предыдущего блока:
+// у старых записей оно приблизительное и может «наехать» на соседа.
+function daySpans(blocks) {
+  const out = [];
+  blocks.forEach((h, i) => {
+    const prev = blocks[i - 1];
+    const from = prev ? Math.max(blockFrom(h), prev.ts) : blockFrom(h);
+    if (prev) out.push({ gap: true, from: prev.ts, to: from, min: Math.round((from - prev.ts) / MIN) });
+    out.push({ h, n: i + 1, from, to: h.ts });
+  });
+  return out;
+}
+
+// Промежуток между блоками: почти без отдыха, нормальный перерыв или уже время без фокуса.
+const REST_MAX = 60;
+const gapKind = m => m < 5 ? 'short' : m > REST_MAX ? 'off' : 'rest';
+function gapText(m) {
+  if (m < 1) return tr('сразу следующий блок');
+  if (m > REST_MAX) return tr('{time} без фокуса', { time: hm(m) });
+  return tr('перерыв {time}', { time: hm(m) }) + (m < 5 ? tr(' — почти без отдыха') : '');
+}
+
+// Целый ли блок: досидел до плана, продлил или закончил раньше. У старых записей плана нет.
+function blockState(h) {
+  if (h.plan === null) return { cls: 'full', text: tr('без таймера') };
+  if (h.plan == null) return null;
+  if (h.min < h.plan - 1) return { cls: 'part', text: tr('прерван · {n} из {plan} мин', { n: h.min, plan: h.plan }) };
+  if (h.min > h.plan + 1) return { cls: 'full', text: tr('целый · +{n} мин', { n: h.min - h.plan }) };
+  return { cls: 'full', text: tr('целый') };
+}
+// Паузы внутри блока: сколько он шёл по часам сверх минут фокуса.
+const blockPause = s => s.h.from ? Math.round((s.to - s.from) / MIN - s.h.min) : 0;
+const blockTitle = s => tr('Блок {n}', { n: s.n }) + ` · ${timeOf(s.from)}–${timeOf(s.to)} · ${hm(s.h.min)}`
+  + (blockState(s.h) ? ' · ' + blockState(s.h).text : '') + (s.h.task ? ' · ' + s.h.task : '');
+
+// Полоска дня: ширина — время по часам. Долгие промежутки сжаты, чтобы обед не съедал всю ленту.
+const GAP_CAP = 40;
+function dayStrip(spans) {
+  const box = document.createElement('div'); box.className = 'strip';
+  const times = document.createElement('div'); times.className = 'strip-times';
+  const t1 = document.createElement('span'), t2 = document.createElement('span');
+  t1.textContent = timeOf(spans[0].from); t2.textContent = timeOf(spans.at(-1).to);
+  times.append(t1, t2);
+  const row = document.createElement('div'); row.className = 'strip-row';
+  spans.forEach(s => {
+    if (s.gap && s.min < 1) return;
+    const cell = document.createElement('div'), bar = document.createElement('i'), lbl = document.createElement('small');
+    if (s.gap) {
+      cell.className = 'st-gap ' + gapKind(s.min);
+      cell.style.flexGrow = Math.min(s.min, GAP_CAP);
+      cell.title = `${timeOf(s.from)}–${timeOf(s.to)} · ${gapText(s.min)}`;
+      // «1ч26», а не «1:26» — иначе похоже на время суток.
+      const [h, mn] = en() ? ['h', 'm'] : ['ч', 'м'];
+      lbl.textContent = s.min < 60 ? `${s.min}${mn}` : `${Math.floor(s.min / 60)}${h}${s.min % 60 ? String(s.min % 60).padStart(2, '0') : ''}`;
+    } else {
+      cell.className = 'st-blk ' + (blockState(s.h)?.cls || '');
+      cell.style.flexGrow = Math.max(1, (s.to - s.from) / MIN);
+      cell.title = blockTitle(s);
+    }
+    cell.append(bar, lbl); row.append(cell);
+  });
+  box.append(times, row);
+  return box;
+}
+
+// «После блока прошло 25 мин» — пока это похоже на перерыв, а не на конец дня.
+function sinceLastText() {
+  const last = dayBlocks(dayKey()).at(-1);
+  const m = last ? Math.floor((now() - last.ts) / MIN) : -1;
+  return m >= 1 && m <= REST_MAX ? tr('после блока прошло {time}', { time: hm(m) }) : '';
+}
+
+function openDay(key, fromHist) {
+  const blocks = dayBlocks(key);
+  if (!blocks.length) return;
+  const spans = daySpans(blocks);
+  const focus = blocks.reduce((a, h) => a + h.min, 0);
+  const rest = spans.filter(s => s.gap && s.min <= REST_MAX).reduce((a, s) => a + s.min, 0);
+  const d = new Date(blocks[0].ts);
+  const date = d.toLocaleDateString(I18N.locale(), { weekday: 'long', day: 'numeric', month: 'long' });
+  $('dayTitle').textContent = date[0].toUpperCase() + date.slice(1) + (key === dayKey() ? tr(' · сегодня') : '');
+  $('daySummary').textContent = tr('{n} {blocks} · {time} фокуса', { n: blocks.length, blocks: plural(blocks.length, 'блок', 'блока', 'блоков'), time: hm(focus) })
+    + (rest ? tr(' · перерывы {time}', { time: hm(rest) }) : '') + ` · ${timeOf(spans[0].from)}–${timeOf(spans.at(-1).to)}`;
+  $('dayStrip').replaceChildren(dayStrip(spans));
+
+  const list = $('daySched'); list.innerHTML = '';
+  spans.forEach(s => {
+    const li = document.createElement('li'), time = document.createElement('span'), rail = document.createElement('i'),
+      body = document.createElement('div');
+    time.className = 's-time'; rail.className = 'rail'; body.className = 's-body';
+    if (s.gap) {
+      li.className = 's-gap ' + gapKind(s.min);
+      body.textContent = gapText(s.min);
+    } else {
+      const state = blockState(s.h);
+      li.className = 's-blk ' + (state?.cls || '');
+      time.textContent = `${timeOf(s.from)}–${timeOf(s.to)}`;
+      const head = document.createElement('div'), name = document.createElement('b');
+      name.textContent = tr('Блок {n}', { n: s.n }) + ` · ${hm(s.h.min)}`;
+      head.append(name);
+      if (state) { const tag = document.createElement('span'); tag.className = 's-tag ' + state.cls; tag.textContent = state.text; head.append(tag); }
+      body.append(head);
+      const pause = blockPause(s);
+      const sub = [s.h.task, pause >= 2 ? tr('паузы внутри {time}', { time: hm(pause) }) : ''].filter(Boolean).join(' · ');
+      if (sub) { const p = document.createElement('div'); p.className = 'muted small'; p.textContent = sub; body.append(p); }
+    }
+    li.append(time, rail, body); list.append(li);
+  });
+  $('dayBack').hidden = !fromHist;
+  closeSheets(); openSheet('daySheet');
+}
 
 // Пояснения по исследованиям (docs/research/reports/Музыка и звук при работе.md): музыка без слов
 // поднимает настроение и бодрость, но мышлению не помогает; для сложной работы лучше тишина.
@@ -1126,7 +1254,7 @@ $('openHist').onclick = () => {
   const byDay = new Map();
   history.forEach(h => {
     const k = dayKey(h.ts);
-    const d = byDay.get(k) || { ts: h.ts, min: 0, n: 0, tasks: new Set(), blocks: [] };
+    const d = byDay.get(k) || { key: k, ts: h.ts, min: 0, n: 0, tasks: new Set(), blocks: [] };
     d.min += h.min; d.n++; d.blocks.push(h); if (h.task) d.tasks.add(h.task);
     byDay.set(k, d);
   });
@@ -1144,17 +1272,12 @@ $('openHist').onclick = () => {
     date.textContent = new Date(d.ts).toLocaleDateString(I18N.locale(), { weekday: 'short', day: 'numeric', month: 'long' });
     const tasks = document.createElement('div'); tasks.className = 'd-tasks';
     tasks.textContent = `${d.n} ${plural(d.n, 'блок', 'блока', 'блоков')}` + (d.tasks.size ? ' · ' + [...d.tasks].join(', ') : '');
-    // Блоки дня: когда были и сколько длились.
-    const chips = document.createElement('div'); chips.className = 'd-blocks';
-    d.blocks.sort((a, b) => a.ts - b.ts).forEach((h, n) => {
-      const c = document.createElement('span');
-      const dot = document.createElement('i');
-      c.append(dot, `${timeOf(h.ts - h.min * MIN)}–${timeOf(h.ts)} · ${short(h.min)}`);
-      c.title = tr('{n}-й блок', { n: n + 1 }) + (h.task ? ' · ' + h.task : '');
-      chips.append(c);
-    });
-    left.append(date, tasks, chips);
+    // Лента дня: блоки и перерывы между ними. Подробности — по клику.
+    left.className = 'd-main';
+    left.append(date, tasks, dayStrip(daySpans(d.blocks.sort((a, b) => a.ts - b.ts))));
     const total = document.createElement('div'); total.className = 'd-total'; total.textContent = hm(d.min);
+    li.className = 'open'; li.title = tr('Блоки и перерывы этого дня');
+    li.onclick = () => openDay(d.key, true);
     li.append(left, total); list.append(li);
   });
   const all = days.reduce((a, d) => a + d.min, 0);
@@ -1163,6 +1286,10 @@ $('openHist').onclick = () => {
     : '';
   openSheet('histSheet');
 };
+$('dayBack').onclick = () => { closeSheets(); $('openHist').click(); };
+const todayOpen = () => openDay(dayKey());
+$('todayCard').onclick = todayOpen;
+$('todayCard').onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); todayOpen(); } };
 $('openSettings').onclick = () => { renderSettings(); openSheet('settingsSheet'); };
 
 function renderSettings() {

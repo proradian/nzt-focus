@@ -16,8 +16,6 @@
   --ring-bg:rgba(255,255,255,.08);
   --sheet:color-mix(in srgb,var(--bg) 90%,#3a4256);
   --shadow:0 20px 50px rgba(0,0,0,.55);
-  /* Цвета блоков внутри дня: палитра для тёмного фона, проверена на различимость */
-  --b1:#3987e5; --b2:#d95926; --b3:#199e70; --b4:#c98500; --b5:#d55181; --b6:#9085e9;
   color-scheme:dark;
 }
 :root.rest{--a1:var(--r1);--a2:var(--r2)}
@@ -138,9 +136,51 @@ body.mini{overflow:hidden}
 .days .d-date{font-weight:600}
 .days .d-date.today::after{content:" · сегодня";font-weight:400;color:var(--muted)}
 .days .d-tasks{font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:220px}
-.days .d-blocks{display:flex;flex-wrap:wrap;gap:3px 10px;margin-top:4px;font-size:12px;font-variant-numeric:tabular-nums}
-.days .d-blocks span{display:inline-flex;align-items:center;gap:4px}
-.days .d-blocks i{width:8px;height:8px;border-radius:50%;display:inline-block;background:linear-gradient(135deg,var(--a1),var(--a2))}
+.days .d-main{flex:1;min-width:0}
+.days li.open{cursor:pointer;margin:0 -8px;padding:10px 8px;border-radius:12px}
+.days li.open:hover{background:var(--glass)}
+.bar.open{cursor:pointer}
+.bar.open:hover span{color:var(--text)}
+
+/* Лента дня: блоки фокуса по времени, между ними — перерывы */
+.today-card{cursor:pointer;transition:background .15s}
+.today-card:hover{background:var(--glass-hi)}
+.today-card:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.today-card .week-head{margin-bottom:4px}
+.strip{margin-top:6px}
+.strip-times{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums;margin-bottom:3px}
+.strip-row{display:flex;align-items:flex-start;gap:2px}
+.strip-row > div{flex:1 1 0;min-width:4px;display:flex;flex-direction:column;align-items:center}
+.strip-row i{display:block;width:100%;height:14px}
+.strip-row small{font-size:10px;line-height:1;margin-top:4px;white-space:nowrap;font-variant-numeric:tabular-nums;min-height:10px}
+.st-blk i{border-radius:4px;background:linear-gradient(90deg,var(--f1),var(--f2));box-shadow:0 0 8px -2px color-mix(in srgb,var(--f2) 60%,transparent)}
+/* Прерванный блок — бледнее и в штриховку */
+.st-blk.part i{background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--f1) 70%,transparent) 0 4px,color-mix(in srgb,var(--f1) 30%,transparent) 4px 8px);box-shadow:none}
+.st-gap{min-width:8px!important}
+.st-gap i{height:2px!important;margin-top:6px;background:repeating-linear-gradient(90deg,var(--r1) 0 3px,transparent 3px 6px)}
+.st-gap small{color:var(--r1)}
+.st-gap.short i{background:repeating-linear-gradient(90deg,var(--muted) 0 2px,transparent 2px 5px)}
+.st-gap.short small{color:var(--muted)}
+.st-gap.off i{background:repeating-linear-gradient(90deg,var(--muted) 0 1px,transparent 1px 6px);opacity:.7}
+.st-gap.off small{color:var(--muted)}
+
+/* Расписание дня */
+#dayStrip{margin:10px 0 6px}
+.sched{list-style:none;margin:12px 0 0;padding:0}
+.sched li{display:grid;grid-template-columns:84px 6px 1fr;gap:0 12px}
+.s-time{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;text-align:right;padding:9px 0;white-space:nowrap}
+.sched .rail{display:block;border-radius:3px}
+.s-blk .rail{background:linear-gradient(var(--f1),var(--f2));margin:4px 0}
+.s-blk.part .rail{background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--f1) 70%,transparent) 0 3px,color-mix(in srgb,var(--f1) 30%,transparent) 3px 6px)}
+.s-gap .rail{width:2px;margin:0 auto;background:repeating-linear-gradient(var(--r1) 0 3px,transparent 3px 6px)}
+.s-gap.short .rail,.s-gap.off .rail{background:repeating-linear-gradient(var(--muted) 0 2px,transparent 2px 6px)}
+.s-body{padding:8px 0;min-width:0}
+.s-body b{font-size:14px;margin-right:8px}
+.s-body .muted{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.s-gap .s-body{padding:5px 0;font-size:13px;color:var(--r1)}
+.s-gap.short .s-body,.s-gap.off .s-body{color:var(--muted)}
+.s-tag{display:inline-block;font-size:11px;font-weight:600;padding:1px 8px;border-radius:99px;background:var(--soft);vertical-align:1px}
+.s-tag.part{background:var(--rest-soft);color:var(--r1)}
 
 .days .d-total{font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
 .bar{display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;justify-content:flex-end}
@@ -312,3 +352,7 @@ input[type=text].task-input{margin-top:14px;padding:10px 14px;font-size:18px;fon
 .site-add button{flex:none;padding:8px 12px;font-size:13px}
 #siteHint:empty{display:none}
 #siteHint.err{color:var(--rest)}
+
+/* Подписи, которые задаёт CSS, на английском */
+html[lang=en] .bars::after{content:"4 h"}
+html[lang=en] .days .d-date.today::after{content:" · today"}

@@ -76,6 +76,11 @@
     <button class="ghost tiny" id="helpCardOpen">Подсказки</button>
   </div>
 
+  <div class="card today-card" id="todayCard" role="button" tabindex="0" title="Блоки и перерывы за сегодня" hidden>
+    <div class="week-head"><span class="muted small">Сегодня</span><span class="small muted" id="todayAgo"></span></div>
+    <div id="todayStrip"></div>
+  </div>
+
   <div class="card" id="limitCard" hidden>
     <p>Сегодня уже 4 ч фокуса. Дальше хуже всего идут трудные задачи и решения, а почта и рутина — нормально. Можно перейти на лёгкое или закончить: оба варианта нормальны.</p>
   </div>
@@ -351,6 +356,17 @@
   <div class="actions"><button class="primary" data-close>Закрыть</button></div>
 </div>
 
+<div class="sheet" id="daySheet" hidden>
+  <h3 id="dayTitle"></h3>
+  <p class="muted small" id="daySummary"></p>
+  <div id="dayStrip"></div>
+  <ol class="sched" id="daySched"></ol>
+  <div class="actions">
+    <button class="ghost" id="dayBack" hidden>Все дни</button>
+    <button class="primary" data-close>Закрыть</button>
+  </div>
+</div>
+
 <div class="sheet" id="onTopSheet" hidden>
   <h3>Отключить «поверх всех окон»?</h3>
   <p class="muted small">Focus перестанет быть виден поверх других программ. Его станет легко потерять из виду и забыть про таймер.</p>
@@ -369,7 +385,7 @@
     <li><span class="tip-ico"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M16 9V4h1a1 1 0 0 0 0-2H7a1 1 0 0 0 0 2h1v5a3 3 0 0 1-3 3v2h5.97v7l1 1 1-1v-7H19v-2a3 3 0 0 1-3-3Z"/></svg></span><div><b>Всегда на виду</b><span>Булавка — поверх всех окон, значок окошка — мини-плашка.</span></div></li>
     <li><span class="tip-ico"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M12 3v10.55A4 4 0 1 0 14 17V7h4V3h-6Z"/></svg></span><div><b>Музыка на вход</b><span>2 минуты спокойной музыки, к 5-й минуте — тишина. Можно выбрать тишину или музыку на весь блок.</span></div></li>
     <li><span class="tip-ico"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20ZM4 12a8 8 0 0 1 12.9-6.32L5.68 16.9A7.93 7.93 0 0 1 4 12Zm8 8a7.93 7.93 0 0 1-4.9-1.68L18.32 7.1A8 8 0 0 1 12 20Z"/></svg></span><div><b>YouTube и соцсети сворачиваются</b><span>«Нужно для работы» — разрешить до конца блока.</span></div></li>
-    <li><span class="tip-ico"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M5 9.2h3V19H5V9.2ZM10.6 5h2.8v14h-2.8V5Zm5.6 8H19v6h-2.8v-6Z"/></svg></span><div><b>График — твоя неделя</b><span>Чем выше и ярче столбик, тем больше фокуса за день. Подробнее — «История по дням».</span></div></li>
+    <li><span class="tip-ico"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M5 9.2h3V19H5V9.2ZM10.6 5h2.8v14h-2.8V5Zm5.6 8H19v6h-2.8v-6Z"/></svg></span><div><b>График — твоя неделя</b><span>Нажми на день — увидишь блоки по времени и перерывы между ними.</span></div></li>
   </ul>
   <button class="link small" id="helpToWhy">Почему именно так — исследования</button>
   <div class="actions"><button class="primary" data-close>Понятно</button></div>
