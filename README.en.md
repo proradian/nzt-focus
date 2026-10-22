@@ -7,9 +7,9 @@ A research-based focus timer for Windows, built with Tauri 2.
 > **The interface is in Russian only for now.** This page is a short English overview; the full description is in the [Russian README](README.md).
 
 <p align="center">
-  <img src="docs/screenshots/focus.png" width="300" alt="Focus screen: timer and music">
+  <img src="docs/screenshots/focus.png" width="300" alt="Focus: timer, task and entry music">
   &nbsp;
-  <img src="docs/screenshots/sites.png" width="300" alt="Settings: which sites to minimize during focus">
+  <img src="docs/screenshots/break.png" width="300" alt="Break: rest away from the screen">
 </p>
 
 ## Features

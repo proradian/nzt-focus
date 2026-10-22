@@ -5,9 +5,9 @@
 Таймер для фокуса построенный на исследованиях о внимании, перерывах и фоновом звуке.
 
 <p align="center">
-  <img src="docs/screenshots/focus.png" width="300" alt="Экран фокуса: таймер, музыка и громкость">
+  <img src="docs/screenshots/focus.png" width="300" alt="Фокус: таймер, задача и музыка на вход">
   &nbsp;
-  <img src="docs/screenshots/sites.png" width="300" alt="Настройки: какие сайты сворачивать во время фокуса">
+  <img src="docs/screenshots/break.png" width="300" alt="Перерыв: отдых без экрана">
 </p>
 
 ## На чём построен Focus
