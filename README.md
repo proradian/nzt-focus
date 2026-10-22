@@ -25,7 +25,7 @@
 <p align="center">
   <img src="docs/screenshots/focus.png" width="300" alt="Фокус: таймер, задача и музыка на вход">
   &nbsp;
-  <img src="docs/screenshots/settings.png" width="300" alt="Настройки: звук в фокусе и сайты, которые сворачиваются">
+  <img src="docs/screenshots/break.png" width="300" alt="Перерыв: отдых без экрана">
 </p>
 
 ## На чём построен NZT Focus
