@@ -4,7 +4,7 @@
 
 A research-based focus timer for Windows, built with Tauri 2.
 
-> **The interface is in Russian only for now.** This page is a short English overview; the full description is in the [Russian README](README.md).
+> **The interface is available in English and Russian** — switch it in Settings → «Язык / Language». This page is a short English overview; the full description is in the [Russian README](README.md).
 
 <p align="center">
   <a href="https://github.com/proradian/nzt-focus/releases/latest/download/NZT-Focus-setup.exe"><img src="https://img.shields.io/badge/Download-for%20Windows-7c5cff?style=for-the-badge&logo=windows&logoColor=white" alt="Download for Windows"></a>
