@@ -71,4 +71,11 @@
 ## От чего отказались
 
 - **Интерактивный «дымок» и фиджеты.** Заметки в [`notes/Фиджеты и микроотвлечения`](notes/Фиджеты%20и%20микроотвлечения): клики и игрушки на экране скорее мешают, а самопрерывания дорогие.
+  - [Soares & Storm 2020](https://www.psypost.org/study-finds-using-a-fidget-spinner-can-impair-memory-and-attention/) (Applied Cognitive Psychology): студенты со спиннером хуже запомнили лекцию и чаще «выпадали», даже если верили, что спиннер помогает.
+  - [Graziano, Garcia & Landis 2020](https://discovery.fiu.edu/display/pub76375) (J Attention Disorders): у детей с СДВГ спиннер ухудшил внимание. [Schoenen et al. 2025](https://scholars.uky.edu/en/publications/a-meta-analysis-of-fidget-devices-as-academic-and-behavioral-inte/), метаанализ 10 исследований: эффект фиджетов около нуля.
+  - Andrade 2010: каракули при прослушивании скучной записи дали +29% к памяти, но выборка крошечная (40 человек). [Spencer-Mueller & Fenske 2024](https://pmc.ncbi.nlm.nih.gov/articles/PMC11295400) (222 человека) эффект не повторили.
+  - [Hartanto et al. 2016](https://pmc.ncbi.nlm.nih.gov/articles/PMC4675699): при СДВГ более интенсивное движение связано с лучшим контролем внимания, без СДВГ связи нет. Это движение тела, а не игрушка, на которую надо смотреть.
+  - [Katidioti et al. 2016](https://www.interruptions.net/literature/Katidioti-ComputHumBehav16.pdf): самопрерывание обходится дороже внешнего — около секунды уходит на само решение «отвлечься или нет».
+  - [Altmann, Trafton & Hambrick 2014](https://www.interruptions.net/literature/Altmann-JExpPsycholGen14.pdf): прерывание на 2,8 секунды удваивает ошибки в последовательной задаче, на 4,4 секунды — утраивает.
+  - [Ariga & Lleras 2011](https://news.illinois.edu/brief-diversions-vastly-improve-focus-researchers-find/) и Albulescu 2022 (выше): короткие переключения и перерывы помогают, но это запланированные паузы, а не игра посреди работы. Поэтому если играть, то в перерыве.
 - **Популярные цифры** вроде «внимание как у золотой рыбки, 8 секунд», «90-минутные циклы», «правило 52/17», «23 минуты на возвращение к задаче». Первоисточники их не подтверждают, разбор — в отчёте о фокусе.
