@@ -871,13 +871,16 @@ const timeOf = ts => new Date(ts).toLocaleTimeString('ru-RU', { hour: '2-digit',
 // поднимает настроение и бодрость, но мышлению не помогает; для сложной работы лучше тишина.
 const SOUND_HINTS = {
   entry: 'Музыка делает начало приятнее, а думать лучше в тишине. Поэтому 2 минуты звучит спокойная музыка без слов, потом она плавно стихает, и к 5-й минуте — тишина. Захочешь войти ещё раз — кнопка «Погружение».',
-  music: 'Спокойная музыка без слов весь блок. Может помочь на однообразной работе: почта, правки, разбор. Для чтения, письма и сложных задач лучше тишина или музыка на вход.',
+  music: 'Не лучший вариант: сложные задачи лучше идут в тишине. Музыка весь блок подходит разве что для однообразной работы — почта, правки, разбор. Для чтения, письма и сложных задач выбери тишину или музыку на вход.',
   silence: 'Лучший вариант для чтения, письма и сложных задач: ничто не отвлекает.'
 };
 // Выбор звука — на главном экране и в настройках, оба показывают одно и то же.
 function renderSound() {
   document.querySelectorAll('.sound-chips button').forEach(b => b.classList.toggle('on', b.dataset.sound === musicMode()));
-  document.querySelectorAll('.sound-hint').forEach(p => p.textContent = SOUND_HINTS[musicMode()]);
+  document.querySelectorAll('.sound-hint').forEach(p => {
+    p.textContent = SOUND_HINTS[musicMode()];
+    p.classList.toggle('warn', musicMode() === 'music');
+  });
 }
 document.querySelectorAll('.sound-chips').forEach(c => c.onclick = e => {
   const b = e.target.closest('button'); if (!b) return;
@@ -892,23 +895,34 @@ $('durChips').onclick = e => {
 
 // Сколько блоков в сессии: 60 минут × 5 блоков — примерно 5 часов работы.
 // Подсказка считает и перерывы между блоками (каждый longEvery-й — длинный), чтобы было видно время конца.
+// Счёт длинных перерывов идёт с начала дня (st.cycle), как и в самих перерывах: блоки, сделанные утром, тоже считаются.
+// Ориентир — около 4 часов глубокой работы в день (GOAL_MIN): если с сегодняшними блоками выйдет больше, подсказка предупреждает.
 const BLOCKS_MIN = 1, BLOCKS_MAX = 12;
 function renderBlocks() {
   const n = settings.blocks, per = chosenMinutes() ?? 60;
   $('blocksStep').querySelector('output').textContent = n;
   const [minus, plus] = $('blocksStep').querySelectorAll('button');
   minus.disabled = n <= BLOCKS_MIN; plus.disabled = n >= BLOCKS_MAX;
-  let rest = 0, cycle = st.day === dayKey() ? st.cycle : 0;
+  let rest = 0, longs = 0, cycle = st.day === dayKey() ? st.cycle : 0;
   for (let i = 1; i < n; i++) {
     const long = cycle + 1 >= settings.longEvery;
     rest += long ? settings.longMin : settings.breakMin;
+    longs += long;
     cycle = long ? 0 : cycle + 1;
   }
   const work = n * per, endAt = timeOf(now() + (work + rest) * MIN);
   const approx = chosenMinutes() == null ? '≈ ' : '';
-  $('blocksHint').textContent = n === 1
+  const longNote = longs ? ` (${longs} ${plural(longs, 'длинный', 'длинных', 'длинных')} по ${settings.longMin} мин)` : '';
+  let text = n === 1
     ? `${approx}${hm(work)} фокуса, закончишь около ${endAt}.`
-    : `${n} × ${per} мин = ${approx}${hm(work)} фокуса. С перерывами ≈ ${hm(work + rest)}, закончишь около ${endAt}.`;
+    : `${n} × ${per} мин = ${approx}${hm(work)} фокуса. С перерывами${longNote} ≈ ${hm(work + rest)}, закончишь около ${endAt}.`;
+  const doneToday = history.filter(h => dayKey(h.ts) === dayKey()).reduce((a, h) => a + h.min, 0);
+  const over = doneToday + work > GOAL_MIN;
+  if (over) text += doneToday
+    ? ` Вместе с сегодняшними ${hm(doneToday)} выйдет ${hm(doneToday + work)} — больше 4 часов: глубокой работы в день обычно выходит около 4 ч, дальше внимание проседает.`
+    : ' Больше 4 часов: глубокой работы в день обычно выходит около 4 ч, дальше внимание проседает.';
+  $('blocksHint').textContent = text;
+  $('blocksHint').classList.toggle('warn', over);
 }
 $('blocksStep').querySelectorAll('button').forEach((b, i) => b.onclick = () => {
   settings.blocks = Math.max(BLOCKS_MIN, Math.min(BLOCKS_MAX, settings.blocks + (i ? 1 : -1)));
