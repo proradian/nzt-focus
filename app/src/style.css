@@ -154,6 +154,12 @@ body.mini{overflow:hidden}
 .phase-tag::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--a1);box-shadow:0 0 10px var(--a1)}
 .phase-tag.paused::before{background:var(--muted);box-shadow:none}
 .task-title{min-height:1.3em;word-break:break-word;margin-top:14px}
+.task-row{display:flex;align-items:center;gap:2px;margin-top:14px}
+.task-row .task-title{flex:1;margin:0;cursor:text;padding:10px 14px;font-size:18px;border:1px solid var(--line);border-radius:12px;
+  background:var(--glass);backdrop-filter:blur(12px);transition:border-color .15s}
+.task-row .task-title:hover{border-color:color-mix(in srgb,var(--accent) 55%,var(--line))}
+.task-row .task-title.empty{color:var(--muted);font-weight:400}
+input[type=text].task-input{margin-top:14px;padding:10px 14px;font-size:18px;font-weight:600}
 
 .ring-wrap{position:relative;width:min(260px,70vw);aspect-ratio:1;margin:18px auto 12px}
 .ring{width:100%;height:100%;transform:rotate(-90deg);overflow:visible}

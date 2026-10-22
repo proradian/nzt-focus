@@ -92,7 +92,10 @@
 <!-- Фокус -->
 <section id="focus" class="screen" hidden>
   <div class="phase-tag" id="focusTag">Фокус</div>
-  <h2 class="task-title" id="focusTask"></h2>
+  <div class="task-row" id="taskRow">
+    <h2 class="task-title" id="focusTask" title="Нажми, чтобы изменить"></h2>
+  </div>
+  <input type="text" id="focusTaskInput" class="task-input" maxlength="80" placeholder="Над чем работаешь?" aria-label="Над чем работаешь" autocomplete="off" hidden>
 
   <div class="ring-wrap">
     <svg class="ring" viewBox="0 0 220 220" aria-hidden="true">
