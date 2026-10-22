@@ -212,8 +212,9 @@ function syncMusic() {
   // Панель не появляется и не исчезает посреди блока: после входа на ней остаются название трека
   // и ссылка на сайт, без кнопок управления.
   row.hidden = st.phase !== 'focus' || musicMode() === 'silence';
-  // На входе панель простая: трек, ссылка на сайт, пояснение и одна кнопка входа.
+  // На входе панель простая: трек, ссылка на сайт, пояснение, кнопка входа и, пока вход звучит, смена трека.
   row.classList.toggle('entry', musicMode() === 'entry');
+  row.classList.toggle('live', time);
   $('mDive').textContent = time ? 'Стоп погружения' : 'Погружение';
   $('mDive').title = time ? 'Остановить музыку сейчас — дальше тишина' : 'Ещё раз музыка на вход: 2 минуты звучит, к 5-й минуте стихает';
   $('musicTitle').textContent = musicTrack || 'Tabletop Audio';
@@ -287,7 +288,11 @@ function renderLiked() {
   });
 }
 $('mToggle').onclick = () => { musicUserPaused = !musicUserPaused; syncMusic(); };
-$('mNext').onclick = () => { musicUserPaused = false; inv('tta_cmd', { cmd: 'next' }); syncMusic(); };
+// Во время входа следующий трек играет с той же громкостью: затухание продолжается, а не начинается заново.
+$('mNext').onclick = () => {
+  if (!musicTime()) return;
+  musicUserPaused = false; inv('tta_cmd', { cmd: 'next' }); syncMusic();
+};
 // Одна кнопка входа: пока музыка звучит — «Стоп погружения» (сразу тишина),
 // после входа — «Погружение» (ещё раз: 2 минуты звучит, к 5-й минуте стихает).
 $('mDive').onclick = () => {
