@@ -22,7 +22,7 @@ A research-based focus timer for Windows, built with Tauri 2.
 
 ## Features
 
-- **Focus blocks and breaks.** 60 minutes of work, then a 10–15 minute break; every third break is long, with micro-breaks every 20 minutes.
+- **Focus blocks and breaks.** 60 minutes of work, then a 10–15 minute break; a long break after every three blocks in a row (a pause of 25 minutes or more between blocks counts as one), with micro-breaks every 20 minutes.
 - **Honest time tracking.** When a block ends, the timer stops. Sleep and shutdown do not count as work.
 - **Distraction blocking.** During a block, Focus minimizes YouTube, VK, Instagram, Telegram Web and Yandex Music, and covers the window if you bring it back. You can switch off built-in sites and add your own by domain. In browsers the site is detected by the tab's address.
 - **Entry music.** By default a block starts with calm instrumental music from Tabletop Audio: it plays for 2 minutes, fades out evenly and is silent by minute 5. You can also choose silence or music for the whole block.
@@ -92,7 +92,7 @@ MICRO-PAUSES
 - Every 20 minutes of a block, a gentle 20-second banner: "Look into the distance, relax your shoulders". No pop-ups; it can be dismissed.
 
 BREAK
-- 10 minutes; every third break is 25 minutes. Buttons "+5 minutes" and "End break".
+- 10 minutes; after every three blocks in a row, 25 minutes. If 25 minutes or more pass between blocks, that already counts as a long rest and the block count starts over. A block ended without a break still counts. Buttons "+5 minutes" and "End break".
 - The break screen shows one random screen-free rest idea.
   Short: walk around the room; look out of the window at something far away; stretch; drink water away from the desk; a few slow breaths with a long exhale; look at something green for about forty seconds.
   Long: go outside; eat away from the desk and screens; talk to someone about something other than work; a short walk or light exercise. Between 12:30 and 15:00 add to long breaks: "you can nap for 15–20 minutes, but no longer than 30".
