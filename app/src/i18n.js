@@ -286,6 +286,39 @@ const I18N = (() => {
     "Перерыв 20–30 минут перекрывает спад примерно за 2 часа работы. Если между блоками прошло столько же (обед, дела), это уже длинный отдых — счёт начинается заново.": "A 20–30 minute break offsets the decline from about 2 hours of work. If that much time passed between blocks (lunch, errands), it already counts as a long rest and the count starts over.",
     "Ориентир, а не предел: к концу долгого дня хуже всего идут трудные задачи и решения, а простые — нормально. Поэтому самое трудное лучше ставить в первые блоки.": "A guideline, not a limit: late in a long day, hard tasks and decisions suffer most while simple ones are fine. So put the hardest work in the first blocks.",
 
+    "Сколько блоков": "How many blocks",
+    "Меньше блоков": "Fewer blocks",
+    "Больше блоков": "More blocks",
+    "Нажми, чтобы изменить": "Click to edit",
+    "Над чем работаешь": "What are you working on",
+    "Последний блок завершён": "Last block done",
+    "Все {n} {blocks} сделаны. Допиши мысль — и можно заканчивать.": "All {n} {blocks} done. Finish your thought and you can wrap up.",
+    "Все {n} {blocks} сделаны: {time} фокуса. Хорошая работа": "All {n} {blocks} done: {time} of focus. Good work",
+    "Блок {n} из {total} завершён": "Block {n} of {total} done",
+    "Все {n} {blocks} сделаны": "All {n} {blocks} done",
+    " · блок {n} из {total}": " · block {n} of {total}",
+    "блок {n} из {total}": "block {n} of {total}",
+    "+{n} мин": "+{n} min",
+    "Перерыв закончился 5 минут назад": "The break ended 5 minutes ago",
+    "Пора возвращаться: {next}.": "Time to get back: {next}.",
+    " ({n} {long} по {min} мин)": " ({n} {long} of {min} min)",
+    "{approx}{work} фокуса, закончишь около {end}.": "{approx}{work} of focus, done around {end}.",
+    "{n} × {per} мин = {approx}{work} фокуса. С перерывами{longs} ≈ {total}, закончишь около {end}.": "{n} × {per} min = {approx}{work} of focus. With breaks{longs} ≈ {total}, done around {end}.",
+    " Вместе с сегодняшними {done} выйдет {sum} — больше 4 часов: глубокой работы в день обычно выходит около 4 ч, дальше внимание проседает.": " Together with today's {done} that makes {sum} — over 4 hours: deep work usually comes to about 4 h a day, after that attention dips.",
+    " Больше 4 часов: глубокой работы в день обычно выходит около 4 ч, дальше внимание проседает.": " Over 4 hours: deep work usually comes to about 4 h a day, after that attention dips.",
+    "Закончить сессию": "End session",
+    "возвращаемся к сессии": "back to the session",
+    "дальше блок {n} из {total}": "next up: block {n} of {total}",
+    "дальше следующий блок": "next up: the next block",
+    "Перерыв скоро закончится": "The break is almost over",
+    "Осталась минута, {next}. Пора возвращаться к столу.": "One minute left, {next}. Time to head back to your desk.",
+    "Блок {x} на паузе": "Block {x} paused",
+    "{n} из {total}": "{n} of {total}",
+    "Сделано {x} · впереди {left}": "{x} done · {left} to go",
+    "После этого ещё {x}": "{x} more after this",
+    "Последний блок": "Last block",
+    "Не лучший вариант: сложные задачи лучше идут в тишине. Музыка весь блок подходит разве что для однообразной работы — почта, правки, разбор. Для чтения, письма и сложных задач выбери тишину или музыку на вход.": "Not the best choice: complex tasks go better in silence. Music throughout suits only repetitive work — email, edits, sorting. For reading, writing and hard tasks choose silence or warm-up music.",
+
     // Плашка и занавес поверх отвлекающих сайтов
     'Сейчас фокус': 'Focus time',
     'Этот сайт': 'This site',
@@ -296,7 +329,7 @@ const I18N = (() => {
     'Переключись на рабочую вкладку сверху — занавес исчезнет сам.': 'Switch to a work tab above — the curtain will disappear on its own.',
   };
   // Слова со счётом: русские три формы → английские две.
-  const PLURAL_EN = { 'блок': ['block', 'blocks'], 'минута': ['minute', 'minutes'], 'день': ['day', 'days'] };
+  const PLURAL_EN = { 'блок': ['block', 'blocks'], 'длинный': ['long', 'long'], 'минута': ['minute', 'minutes'], 'день': ['day', 'days'] };
 
   const readLang = () => { try { return JSON.parse(localStorage.getItem('focus.settings.v2'))?.lang; } catch { return null; } };
   let lang = readLang() === 'en' ? 'en' : 'ru';

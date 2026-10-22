@@ -49,14 +49,15 @@
     <button data-min="45">45</button>
     <button data-min="60">60</button>
     <button data-min="90">90</button>
-    <button data-min="custom" id="customChip">Своё</button>
     <button data-min="free" title="Секундомер без жёсткого конца">∞</button>
   </div>
-  <div id="customRow" class="custom-row" hidden>
-    <input type="range" id="customRange" min="10" max="120" step="5" value="60">
-    <output id="customOut">60 мин</output>
-  </div>
   <p class="hint" id="durHint"></p>
+
+  <div class="blocks-row">
+    <span class="field-label">Сколько блоков</span>
+    <div class="stepper" id="blocksStep"><button aria-label="Меньше блоков">−</button><output></output><button aria-label="Больше блоков">+</button></div>
+  </div>
+  <p class="hint" id="blocksHint"></p>
 
   <div class="field-label">Фон</div>
   <div class="chips sound-chips" id="soundChips">
@@ -91,7 +92,10 @@
 <!-- Фокус -->
 <section id="focus" class="screen" hidden>
   <div class="phase-tag" id="focusTag">Фокус</div>
-  <h2 class="task-title" id="focusTask"></h2>
+  <div class="task-row" id="taskRow">
+    <h2 class="task-title" id="focusTask" title="Нажми, чтобы изменить"></h2>
+  </div>
+  <input type="text" id="focusTaskInput" class="task-input" maxlength="80" placeholder="Над чем работаешь?" aria-label="Над чем работаешь" autocomplete="off" hidden>
 
   <div class="ring-wrap">
     <svg class="ring" viewBox="0 0 220 220" aria-hidden="true">
@@ -105,6 +109,7 @@
       <div class="muted small" id="focusSub">осталось</div>
     </div>
   </div>
+  <div class="session-prog" id="focusProg" hidden><div class="segs"></div><div class="seg-text"></div></div>
 
   <div class="music-row" id="musicRow" hidden>
     <span class="music-note" aria-hidden="true">
@@ -206,6 +211,7 @@
       <div class="muted small">отдыха</div>
     </div>
   </div>
+  <div class="session-prog" id="brkProg" hidden><div class="segs"></div><div class="seg-text"></div></div>
 
   <p class="muted small center" id="brkWhy" hidden>Больше 2 часов фокуса без длинного отдыха — поэтому перерыв на 5 минут дольше.</p>
   <div class="card soft">

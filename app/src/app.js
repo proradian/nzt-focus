@@ -11,7 +11,7 @@ const write = (k, v) => {
 };
 
 const DEFAULTS = {
-  dur: '60', customMin: 60, breakMin: 10, longEvery: 3, longMin: 25, capMin: 90,
+  dur: '60', blocks: 4, breakMin: 10, longEvery: 3, longMin: 25, capMin: 90,
   micro: true, sound: true, notify: true, popup: true, extraMin: 5, lastTask: '', onTop: true,
   soundMode: 'entry', musicCalm: true, musicVol: 30, guard: true, closeYandex: true, theme: 'indigo'
 };
@@ -23,6 +23,12 @@ if (!settings.onTopV2) { settings.onTop = true; settings.onTopV2 = true; write(K
 // Звук в фокусе (soundMode): 'silence' — тишина, 'entry' — музыка на вход, 'music' — музыка весь блок.
 // С этой версии по умолчанию «музыка на вход»: она помогает начать, а сложная работа идёт в тишине.
 if (!settings.soundV4) { settings.soundMode = 'entry'; settings.soundV4 = true; delete settings.music; delete settings.silenceV3; write(K_SET, settings); }
+// Кнопку «Своё» заменила настройка числа блоков: своя длительность становится ближайшей из кнопок.
+if (settings.dur === 'custom') {
+  const m = settings.customMin ?? 60;
+  settings.dur = String([25, 45, 60, 90].reduce((a, b) => Math.abs(b - m) < Math.abs(a - m) ? b : a));
+  delete settings.customMin; write(K_SET, settings);
+}
 const saveSettings = () => write(K_SET, settings);
 const fx = window.FocusFx;
 fx?.setTheme(settings.theme);
@@ -207,8 +213,9 @@ function syncMusic() {
   // Панель не появляется и не исчезает посреди блока: после входа на ней остаются название трека
   // и ссылка на сайт, без кнопок управления.
   row.hidden = st.phase !== 'focus' || musicMode() === 'silence';
-  // На входе панель простая: трек, ссылка на сайт, пояснение и одна кнопка входа.
+  // На входе панель простая: трек, ссылка на сайт, пояснение, кнопка входа и, пока вход звучит, смена трека.
   row.classList.toggle('entry', musicMode() === 'entry');
+  row.classList.toggle('live', time);
   $('mDive').textContent = tr(time ? 'Стоп погружения' : 'Погружение');
   $('mDive').title = tr(time ? 'Остановить музыку сейчас — дальше тишина' : 'Ещё раз музыка на вход: 2 минуты звучит, к 5-й минуте стихает');
   $('musicTitle').textContent = musicTrack || 'Tabletop Audio';
@@ -282,7 +289,11 @@ function renderLiked() {
   });
 }
 $('mToggle').onclick = () => { musicUserPaused = !musicUserPaused; syncMusic(); };
-$('mNext').onclick = () => { musicUserPaused = false; inv('tta_cmd', { cmd: 'next' }); syncMusic(); };
+// Во время входа следующий трек играет с той же громкостью: затухание продолжается, а не начинается заново.
+$('mNext').onclick = () => {
+  if (!musicTime()) return;
+  musicUserPaused = false; inv('tta_cmd', { cmd: 'next' }); syncMusic();
+};
 // Одна кнопка входа: пока музыка звучит — «Стоп погружения» (сразу тишина),
 // после входа — «Погружение» (ещё раз: 2 минуты звучит, к 5-й минуте стихает).
 $('mDive').onclick = () => {
@@ -447,7 +458,6 @@ const capMs = () => settings.capMin * MIN;
 
 function chosenMinutes() {
   if (settings.dur === 'free') return null;
-  if (settings.dur === 'custom') return settings.customMin;
   return +settings.dur;
 }
 
@@ -456,12 +466,18 @@ function chosenMinutes() {
 // Поэтому после обеда или долгого отсутствия блоки считаются заново, а не продолжают утренний счёт.
 const lastBlockEnd = () => history.reduce((t, h) => Math.max(t, h.ts), 0);
 const resetSeries = () => { st.cycle = 0; st.seriesMin = 0; };
+const seriesFresh = () => now() - lastBlockEnd() >= settings.longMin * MIN;
 
-function startFocus(planMin, task, note) {
+// Сессия — несколько блоков подряд с перерывами: st.blockNo — номер текущего блока, st.blocksPlan — сколько задумано.
+// После последнего блока Focus предлагает закончить, а не начинать следующий.
+const isLastBlock = () => !!st.blocksPlan && st.blockNo >= st.blocksPlan;
+
+function startFocus(planMin, task, note, blockNo = 1) {
   initAudio();
-  if (now() - lastBlockEnd() >= settings.longMin * MIN) resetSeries();
-  st = { ...st, phase: 'focus', task, note: note || '', planMin, basePlan: planMin, extendMin: 0, acc: 0, runFrom: now(), entryFrom: 0,
-         micro: [], extraCount: 0, brk: null, wrapAt: null, auto: 0, seen: now() };
+  if (seriesFresh()) resetSeries();
+  const session = blockNo === 1 ? { blocksPlan: settings.blocks, sessionMin: 0 } : {};
+  st = { ...st, ...session, phase: 'focus', task, note: note || '', planMin, basePlan: planMin, extendMin: 0, acc: 0, runFrom: now(), entryFrom: 0,
+         micro: [], extraCount: 0, brk: null, wrapAt: null, auto: 0, seen: now(), blockNo, doneAt: null };
   save(); render();
   onFocusStart();
 }
@@ -481,6 +497,7 @@ function recordBlock() {
     st.seriesMin = (st.seriesMin || 0) + min;
     const plan = (st.basePlan !== undefined ? st.basePlan : st.planMin) ?? 60;
     if (min >= plan / 2) st.cycle++;
+    st.sessionMin = (st.sessionMin || 0) + min;
   }
   return min;
 }
@@ -503,8 +520,15 @@ function enterWrap() {
   st.phase = 'wrap'; save(); render();
   chimeEnd();
   const m = Math.round(elapsed() / MIN);
-  notify(tr('Блок завершён'), tr('{n} {minutes} фокуса. Допиши мысль — и на перерыв.', { n: m, minutes: plural(m, 'минута', 'минуты', 'минут') }));
+  if (isLastBlock()) notify(tr('Последний блок завершён'), tr('Все {n} {blocks} сделаны. Допиши мысль — и можно заканчивать.', { n: st.blocksPlan, blocks: plural(st.blocksPlan, 'блок', 'блока', 'блоков') }));
+  else notify(tr('Блок завершён'), tr('{n} {minutes} фокуса. Допиши мысль — и на перерыв.', { n: m, minutes: plural(m, 'минута', 'минуты', 'минут') }));
   popup();
+}
+
+// Сессия выполнена целиком: все задуманные блоки сделаны.
+function finishSession() {
+  const n = st.blocksPlan, total = st.sessionMin || 0;
+  goHome(tr('Все {n} {blocks} сделаны: {time} фокуса. Хорошая работа', { n, blocks: plural(n, 'блок', 'блока', 'блоков'), time: hm(total) }));
 }
 
 function startBreak(kind, min, tired = false) {
@@ -514,11 +538,27 @@ function startBreak(kind, min, tired = false) {
   save(); render();
 }
 
+// Что ждёт после перерыва — для уведомлений.
+const nextUp = () => st.brk?.kind === 'extra' ? tr('возвращаемся к сессии')
+  : st.blocksPlan ? tr('дальше блок {n} из {total}', { n: st.blockNo + 1, total: st.blocksPlan }) : tr('дальше следующий блок');
+const cap = t => t[0].toUpperCase() + t.slice(1);
+
+// Уведомления о конце перерыва: за минуту до конца, в момент конца и ещё раз,
+// если через REMIND после конца человек так и не вернулся.
+const BRK_WARN = MIN, REMIND = 5 * MIN;
+function warnBreak() {
+  st.brk.warned = true; save();
+  chimeSoft();
+  notify(tr('Перерыв скоро закончится'), tr('Осталась минута, {next}. Пора возвращаться к столу.', { next: nextUp() }));
+}
+
 function endBreak(natural) {
-  st.phase = 'brkDone'; save(); render();
+  const next = nextUp();
+  st.phase = 'brkDone'; st.doneAt = natural ? now() : null; st.reminded = false;
+  save(); render();
   if (natural) {
     chimeBack();
-    notify(tr('Перерыв окончен'), st.note ? tr('Ты остановился на: {note}', { note: st.note }) : tr('Можно продолжать.'));
+    notify(tr('Перерыв окончен'), `${cap(next)}.` + (st.note ? ' ' + tr('Ты остановился на: {note}', { note: st.note }) : ''));
     popup();
   }
 }
@@ -550,6 +590,8 @@ function pickIdea(kind) {
 
 // ---------- Отрисовка ----------
 function render() {
+  // Название правили, и тут сменилась фаза — сохраняем то, что успели вписать.
+  if (!$('focusTaskInput').hidden) saveTask();
   show(PHASE_SCREEN[st.phase] || 'home');
   closeSheets();
   const live = st.phase === 'focus' || st.phase === 'break';
@@ -559,19 +601,24 @@ function render() {
   $('openSettings').hidden = st.phase !== 'idle';
   if (st.phase === 'idle') renderHome();
   if (st.phase === 'focus') {
-    $('focusTask').textContent = st.task || tr('Фокус-сессия');
+    renderTaskTitle();
     $('noteCard').hidden = !st.note;
     $('noteText').textContent = st.note || '';
     $('microBanner').hidden = true;
     $('stopBtn').textContent = tr('Завершить');
   }
   if (st.phase === 'wrap') {
-    const m = Math.round(elapsed() / MIN);
-    $('wrapTitle').textContent = isFree()
+    const m = Math.round(elapsed() / MIN), last = isLastBlock();
+    $('wrapTag').textContent = st.blocksPlan ? tr('Блок {n} из {total} завершён', { n: st.blockNo, total: st.blocksPlan }) : tr('Блок завершён');
+    $('wrapTitle').textContent = last
+      ? tr('Все {n} {blocks} сделаны', { n: st.blocksPlan, blocks: plural(st.blocksPlan, 'блок', 'блока', 'блоков') })
+      : isFree()
       ? tr('{n} {minutes} фокуса. Пора отдохнуть', { n: m, minutes: plural(m, 'минута', 'минуты', 'минут') })
       : tr('Блок завершён. Время отдохнуть');
     $('wrapNote').value = '';
-    $('takeBreakBtn').textContent = breakLabel(breakPlan(wrapMin()));
+    $('takeBreakBtn').textContent = wrapBtnLabel();
+    // После последнего блока «Закончить на сегодня» повторяло бы главную кнопку.
+    $('wrapEndBtn').hidden = last;
     setTimeout(() => $('wrapNote').focus(), 50);
   }
   if (st.phase === 'break') {
@@ -594,7 +641,8 @@ function render() {
         : tr('Продолжить · осталось {time}', { time: mmss(targetMs() - elapsed()) });
     } else {
       const m = st.basePlan !== undefined ? st.basePlan : st.planMin;
-      $('resumeBtn').textContent = m == null ? tr('Начать фокус · без таймера') : tr('Начать фокус · {n} мин', { n: m });
+      const no = st.blocksPlan ? tr(' · блок {n} из {total}', { n: st.blockNo + 1, total: st.blocksPlan }) : '';
+      $('resumeBtn').textContent = (m == null ? tr('Начать фокус · без таймера') : tr('Начать фокус · {n} мин', { n: m })) + no;
     }
   }
   tick();
@@ -605,15 +653,17 @@ function render() {
 // восстанавливали одинаково, Kopardekar & Mital 1994). После 2 часов фокуса без длинного отдыха —
 // на 5 минут дольше: при работе за экраном больше 2 часов после каждого часа нужно от 15 минут (Horie 1987).
 const TIRED_MIN = 120;
-function breakPlan(blockMin) {
-  if ((st.cycle + 1) >= settings.longEvery) return { kind: 'long', min: settings.longMin, tired: false };
-  const tired = (st.seriesMin || 0) + blockMin >= TIRED_MIN;
+function breakPlan(blockMin, cycle = st.cycle, series = st.seriesMin || 0) {
+  if ((cycle + 1) >= settings.longEvery) return { kind: 'long', min: settings.longMin, tired: false };
+  const tired = series + blockMin >= TIRED_MIN;
   const perHour = settings.breakMin + (tired ? 5 : 0);
   const min = Math.min(settings.longMin, Math.max(5, Math.round(perHour * blockMin / 60)));
   return { kind: 'regular', min, tired };
 }
 // Сколько минут засчитается блоку, если нажать «Перерыв» сейчас (с дописанной мыслью).
 const wrapMin = () => Math.round((elapsed() + (sinceWrap() <= GRACE ? sinceWrap() : 0)) / MIN);
+// После последнего блока сессии вместо перерыва — конец сессии.
+const wrapBtnLabel = () => isLastBlock() ? tr('Закончить сессию') : breakLabel(breakPlan(wrapMin()));
 const breakLabel = p => p.kind === 'long' ? tr('Длинный перерыв {n} мин', { n: p.min }) : tr('Перерыв {n} мин', { n: p.min });
 
 function setRing(el, frac) {
@@ -650,10 +700,12 @@ function catchUpGap(t) {
 function autoCloseBlock() {
   const { kind } = breakPlan(Math.round(elapsed() / MIN));
   const m = recordBlock();
+  if (isLastBlock()) { finishSession(); return; }
   if (kind === 'long') resetSeries();
   st.phase = 'brkDone';
   st.brk = { kind };
   st.auto = m;
+  st.doneAt = null;
   save(); render();
 }
 
@@ -665,6 +717,8 @@ function tick() {
   syncMusic();
   if (st.phase === 'idle') {
     native.title('NZT Focus'); native.tray('NZT Focus'); native.progress('none', 0);
+    // Время конца сессии в подсказке сдвигается вместе с часами.
+    native.once('blocksHint', Math.floor(t / MIN), renderBlocks);
     return;
   }
 
@@ -677,13 +731,16 @@ function tick() {
     $('focusRing').classList.toggle('paused', !running);
     setRing($('focusRing'), el / tgt);
     const tag = $('focusTag');
-    tag.textContent = running ? (st.extendMin ? tr('Фокус · +{n} мин', { n: st.extendMin }) : tr('Фокус')) : tr('Пауза');
+    const blockOf = st.blocksPlan ? tr('блок {n} из {total}', { n: st.blockNo, total: st.blocksPlan }) : '';
+    tag.textContent = [tr(running ? 'Фокус' : 'Пауза'), blockOf, running && st.extendMin ? tr('+{n} мин', { n: st.extendMin }) : ''].filter(Boolean).join(' · ');
+    renderProg('focusProg', el / tgt);
     tag.classList.toggle('paused', !running);
     $('pauseBtn').textContent = tr(running ? 'Пауза' : 'Продолжить');
     $('extraHint').hidden = !(st.extraCount >= 2 && tgt - el > 12 * MIN);
 
     const label = free ? tr('{time} фокуса', { time: mmss(el) }) : tr('{time} до перерыва', { time: mmss(tgt - el) });
-    native.title(running ? tr('{time} · Фокус', { time: mmss(free ? el : tgt - el) }) : tr('Пауза · NZT Focus'));
+    const no = st.blocksPlan ? ` ${st.blockNo}/${st.blocksPlan}` : '';
+    native.title(running ? tr('{time} · Фокус', { time: mmss(free ? el : tgt - el) }) + no : tr('Пауза · NZT Focus'));
     native.tray(`NZT Focus — ${running ? label : tr('пауза')}`);
     native.progress(running ? 'normal' : 'paused', (el / tgt) * 100);
 
@@ -699,7 +756,7 @@ function tick() {
     if (away >= AUTO) { autoCloseBlock(); return; }
     $('overtime').hidden = away < 30000;
     $('overtimeVal').textContent = '+' + mmss(away);
-    $('takeBreakBtn').textContent = breakLabel(breakPlan(wrapMin()));
+    $('takeBreakBtn').textContent = wrapBtnLabel();
     $('extendBtn').disabled = elapsed() >= capMs();
     $('wrapText').textContent = elapsed() >= capMs()
       ? tr('Это уже {n} минут подряд — дальше внимание заметно падает. Лучше отдохнуть.', { n: Math.round(elapsed() / MIN) })
@@ -713,15 +770,24 @@ function tick() {
   if (st.phase === 'break') {
     const b = st.brk, left = b.endAt - t;
     $('brkClock').textContent = mmss(left);
+    // Внеплановый перерыв прервал блок — отрезок заполнен на сколько успели; обычный — блок сделан.
+    renderProg('brkProg', b.kind === 'extra' ? elapsed() / targetMs() : 1);
     setRing($('brkRing'), 1 - left / b.totalMs);
     native.title(tr('{time} · Перерыв', { time: mmss(left) }));
     native.tray(tr('NZT Focus — перерыв, ещё {time}', { time: mmss(left) }));
     native.progress('paused', (1 - left / b.totalMs) * 100);
     if (left <= 0) endBreak(true);
+    else if (left <= BRK_WARN && !b.warned && b.totalMs > 2 * BRK_WARN) warnBreak();
     return;
   }
 
   if (st.phase === 'brkDone') {
+    if (st.doneAt && !st.reminded && t - st.doneAt >= REMIND) {
+      st.reminded = true; save();
+      chimeBack();
+      notify(tr('Перерыв закончился 5 минут назад'), tr('Пора возвращаться: {next}.', { next: nextUp() }));
+      popup();
+    }
     native.title(tr('Продолжаем? · NZT Focus'));
     native.tray(tr('NZT Focus — перерыв окончен'));
     native.progress('none', 0);
@@ -760,18 +826,14 @@ const DUR_HINTS = {
   '45': 'Средний блок, как школьный урок.',
   '60': 'Рекомендуемый: час работы → 10 минут отдыха. Так советуют нормы Японии, США и Великобритании.',
   '90': 'Длинный блок для глубокой работы. Дольше без отдыха лучше не тянуть.',
-  'custom': 'Своя длительность от 10 до 120 минут.',
   'free': 'Без жёсткого конца: таймер считает вверх и предложит перерыв на 60-й минуте.'
 };
 
 function renderHome() {
   $('task').value = settings.lastTask || '';
   document.querySelectorAll('#durChips button').forEach(b => b.classList.toggle('on', b.dataset.min === settings.dur));
-  $('customRow').hidden = settings.dur !== 'custom';
-  $('customRange').value = settings.customMin;
-  $('customOut').textContent = settings.customMin + ' ' + tr('мин');
-  $('customChip').textContent = settings.dur === 'custom' ? settings.customMin + '′' : tr('Своё');
   $('durHint').textContent = tr(DUR_HINTS[settings.dur]);
+  renderBlocks();
   renderSound();
   $('helpCard').hidden = !!settings.helpSeen;
 
@@ -846,13 +908,16 @@ const timeOf = ts => new Date(ts).toLocaleTimeString(I18N.locale(), { hour: '2-d
 // поднимает настроение и бодрость, но мышлению не помогает; для сложной работы лучше тишина.
 const SOUND_HINTS = {
   entry: 'Музыка делает начало приятнее, а думать лучше в тишине. Поэтому 2 минуты звучит спокойная музыка без слов, потом она плавно стихает, и к 5-й минуте — тишина. Захочешь войти ещё раз — кнопка «Погружение».',
-  music: 'Спокойная музыка без слов весь блок. Может помочь на однообразной работе: почта, правки, разбор. Для чтения, письма и сложных задач лучше тишина или музыка на вход.',
+  music: 'Не лучший вариант: сложные задачи лучше идут в тишине. Музыка весь блок подходит разве что для однообразной работы — почта, правки, разбор. Для чтения, письма и сложных задач выбери тишину или музыку на вход.',
   silence: 'Лучший вариант для чтения, письма и сложных задач: ничто не отвлекает.'
 };
 // Выбор звука — на главном экране и в настройках, оба показывают одно и то же.
 function renderSound() {
   document.querySelectorAll('.sound-chips button').forEach(b => b.classList.toggle('on', b.dataset.sound === musicMode()));
-  document.querySelectorAll('.sound-hint').forEach(p => p.textContent = tr(SOUND_HINTS[musicMode()]));
+  document.querySelectorAll('.sound-hint').forEach(p => {
+    p.textContent = tr(SOUND_HINTS[musicMode()]);
+    p.classList.toggle('warn', musicMode() === 'music');
+  });
 }
 document.querySelectorAll('.sound-chips').forEach(c => c.onclick = e => {
   const b = e.target.closest('button'); if (!b) return;
@@ -864,11 +929,44 @@ $('durChips').onclick = e => {
   const b = e.target.closest('button'); if (!b) return;
   settings.dur = b.dataset.min; saveSettings(); renderHome();
 };
-$('customRange').oninput = e => {
-  settings.customMin = +e.target.value; saveSettings();
-  $('customOut').textContent = settings.customMin + ' ' + tr('мин');
-  $('customChip').textContent = settings.customMin + '′';
-};
+
+// Сколько блоков в сессии: 60 минут × 5 блоков — примерно 5 часов работы.
+// Подсказка считает и перерывы между блоками так же, как их назначит breakPlan (по длине блока, длинный — каждый
+// longEvery-й, после 2 часов подряд — дольше), чтобы было видно время конца. Серия продолжает сегодняшнюю,
+// если с последнего блока не прошло времени длинного перерыва.
+// Ориентир — около 4 часов глубокой работы в день (GOAL_MIN): если с сегодняшними блоками выйдет больше, подсказка предупреждает.
+const BLOCKS_MIN = 1, BLOCKS_MAX = 12;
+function renderBlocks() {
+  const n = settings.blocks, per = chosenMinutes() ?? 60;
+  $('blocksStep').querySelector('output').textContent = n;
+  const [minus, plus] = $('blocksStep').querySelectorAll('button');
+  minus.disabled = n <= BLOCKS_MIN; plus.disabled = n >= BLOCKS_MAX;
+  const fresh = seriesFresh();
+  let rest = 0, longs = 0, cycle = fresh ? 0 : st.cycle, series = fresh ? 0 : (st.seriesMin || 0);
+  for (let i = 1; i < n; i++) {
+    const b = breakPlan(per, cycle, series);
+    rest += b.min;
+    if (b.kind === 'long') { longs++; cycle = 0; series = 0; } else { cycle++; series += per; }
+  }
+  const work = n * per, endAt = timeOf(now() + (work + rest) * MIN);
+  const approx = chosenMinutes() == null ? '≈ ' : '';
+  const longNote = longs ? tr(' ({n} {long} по {min} мин)', { n: longs, long: plural(longs, 'длинный', 'длинных', 'длинных'), min: settings.longMin }) : '';
+  let text = n === 1
+    ? tr('{approx}{work} фокуса, закончишь около {end}.', { approx, work: hm(work), end: endAt })
+    : tr('{n} × {per} мин = {approx}{work} фокуса. С перерывами{longs} ≈ {total}, закончишь около {end}.',
+        { n, per, approx, work: hm(work), longs: longNote, total: hm(work + rest), end: endAt });
+  const doneToday = history.filter(h => dayKey(h.ts) === dayKey()).reduce((a, h) => a + h.min, 0);
+  const over = doneToday + work > GOAL_MIN;
+  if (over) text += doneToday
+    ? tr(' Вместе с сегодняшними {done} выйдет {sum} — больше 4 часов: глубокой работы в день обычно выходит около 4 ч, дальше внимание проседает.', { done: hm(doneToday), sum: hm(doneToday + work) })
+    : tr(' Больше 4 часов: глубокой работы в день обычно выходит около 4 ч, дальше внимание проседает.');
+  $('blocksHint').textContent = text;
+  $('blocksHint').classList.toggle('warn', over);
+}
+$('blocksStep').querySelectorAll('button').forEach((b, i) => b.onclick = () => {
+  settings.blocks = Math.max(BLOCKS_MIN, Math.min(BLOCKS_MAX, settings.blocks + (i ? 1 : -1)));
+  saveSettings(); renderBlocks();
+});
 $('task').oninput = e => { settings.lastTask = e.target.value; saveSettings(); };
 $('task').onkeydown = e => { if (e.key === 'Enter') $('startBtn').click(); };
 $('startBtn').onclick = () => startFocus(chosenMinutes(), $('task').value.trim(), '');
@@ -909,6 +1007,50 @@ $('extraGo').onclick = () => {
   startBreak('extra', settings.extraMin);
 };
 
+// Блоки сессии под таймером: отрезок на каждый блок — сделанные залиты, текущий заполняется вместе с таймером.
+// Номер блока — в плашке над таймером, здесь подпись словами: сколько ещё осталось после него.
+function renderProg(id, frac) {
+  const box = $(id), n = st.blocksPlan, no = st.blockNo;
+  box.hidden = !n;
+  if (!n) return;
+  const segs = box.querySelector('.segs');
+  if (segs.children.length !== n) segs.replaceChildren(...Array.from({ length: n }, () => document.createElement('i')));
+  [...segs.children].forEach((s, i) => {
+    s.style.setProperty('--f', i < no - 1 ? 1 : i === no - 1 ? Math.min(1, frac).toFixed(3) : 0);
+    s.classList.toggle('cur', i === no - 1);
+  });
+  const left = n - no, blocks = k => `${k} ${plural(k, 'блок', 'блока', 'блоков')}`, b = x => `<b>${x}</b>`;
+  box.querySelector('.seg-text').innerHTML = st.phase === 'break'
+    ? (st.brk?.kind === 'extra' ? tr('Блок {x} на паузе', { x: b(tr('{n} из {total}', { n: no, total: n })) })
+      : tr('Сделано {x} · впереди {left}', { x: b(tr('{n} из {total}', { n: no, total: n })), left: blocks(left) }))
+    : left ? tr('После этого ещё {x}', { x: b(blocks(left)) }) : b(tr('Последний блок'));
+}
+
+// Название фокуса можно поменять прямо во время блока: оно попадёт в историю, мини-плашку и следующие блоки.
+// Название — обычный текст: клик по нему открывает правку. Пустое — в рамке, как поле ввода, с бледной подсказкой.
+function renderTaskTitle() {
+  $('focusTask').textContent = st.task || tr('Над чем работаешь?');
+  $('focusTask').classList.toggle('empty', !st.task);
+}
+function editTask(on) {
+  $('taskRow').hidden = on;
+  $('focusTaskInput').hidden = !on;
+  if (on) { const i = $('focusTaskInput'); i.value = st.task || ''; i.focus(); i.select(); }
+}
+function saveTask() {
+  st.task = $('focusTaskInput').value.trim();
+  settings.lastTask = st.task; saveSettings(); save();
+  renderTaskTitle();
+  editTask(false); renderMini();
+}
+$('focusTask').onclick = () => editTask(true);
+$('focusTaskInput').onkeydown = e => {
+  if (e.key === 'Enter') saveTask();
+  if (e.key === 'Escape') editTask(false);
+};
+// Escape уже спрятал поле — тогда blur ничего не сохраняет.
+$('focusTaskInput').onblur = () => { if (!$('focusTaskInput').hidden) saveTask(); };
+
 $('shortenBtn').onclick = () => {
   st.planMin = Math.ceil(elapsed() / MIN) + 10; st.extendMin = 0; save();
   toast(tr('Блок закончится через 10 минут'));
@@ -930,6 +1072,7 @@ $('takeBreakBtn').onclick = () => {
   creditWrap();
   const plan = breakPlan(Math.round(elapsed() / MIN));
   recordBlock();
+  if (isLastBlock()) { finishSession(); return; }
   if (plan.kind === 'long') resetSeries();
   startBreak(plan.kind, plan.min, plan.tired);
 };
@@ -941,12 +1084,12 @@ $('wrapEndBtn').onclick = () => {
 };
 
 // ---------- Перерыв ----------
-$('brkPlus').onclick = () => { st.brk.endAt += 5 * MIN; st.brk.totalMs += 5 * MIN; save(); render(); };
+$('brkPlus').onclick = () => { st.brk.endAt += 5 * MIN; st.brk.totalMs += 5 * MIN; st.brk.warned = false; save(); render(); };
 $('brkEndBtn').onclick = () => endBreak(false);
 
 $('resumeBtn').onclick = () => {
   if (st.brk?.kind === 'extra') { st.phase = 'focus'; st.brk = null; resumeFocus(); save(); render(); }
-  else startFocus(st.basePlan !== undefined ? st.basePlan : st.planMin, st.task, st.note);
+  else startFocus(st.basePlan !== undefined ? st.basePlan : st.planMin, st.task, st.note, (st.blockNo || 0) + 1);
 };
 $('moreRestBtn').onclick = () => startBreak(st.brk?.kind || 'regular', 5);
 $('doneEndBtn').onclick = () => {
@@ -1023,7 +1166,7 @@ $('openHist').onclick = () => {
 $('openSettings').onclick = () => { renderSettings(); openSheet('settingsSheet'); };
 
 function renderSettings() {
-  document.querySelectorAll('.stepper').forEach(s => {
+  document.querySelectorAll('#settingsSheet .stepper').forEach(s => {
     const unit = tr(s.dataset.unit || 'мин');
     s.querySelector('output').textContent = `${settings[s.dataset.key]} ${unit}`;
   });
@@ -1089,7 +1232,7 @@ $('musicVol').oninput = $('mVol').oninput = e => {
   inv('tta_cmd', { cmd: 'volume', volume: sentVol });
 };
 renderVol();
-document.querySelectorAll('.stepper').forEach(s => {
+document.querySelectorAll('#settingsSheet .stepper').forEach(s => {
   const [minus, plus] = s.querySelectorAll('button');
   const step = d => {
     const k = s.dataset.key, v = settings[k] + d * +s.dataset.step;
