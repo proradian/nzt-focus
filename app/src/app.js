@@ -456,7 +456,6 @@ function chosenMinutes() {
 
 // Сессия — несколько блоков подряд с перерывами: st.blockNo — номер текущего блока, st.blocksPlan — сколько задумано.
 // После последнего блока Focus предлагает закончить, а не начинать следующий.
-const blockOf = () => st.blocksPlan ? `блок ${st.blockNo} из ${st.blocksPlan}` : '';
 const isLastBlock = () => !!st.blocksPlan && st.blockNo >= st.blocksPlan;
 
 function rollDay() {
@@ -702,13 +701,16 @@ function tick() {
     $('focusRing').classList.toggle('paused', !running);
     setRing($('focusRing'), el / tgt);
     const tag = $('focusTag');
-    tag.textContent = [running ? 'Фокус' : 'Пауза', blockOf(), running && st.extendMin ? `+${st.extendMin} мин` : ''].filter(Boolean).join(' · ');
+    const blockOf = st.blocksPlan ? `блок ${st.blockNo} из ${st.blocksPlan}` : '';
+    tag.textContent = [running ? 'Фокус' : 'Пауза', blockOf, running && st.extendMin ? `+${st.extendMin} мин` : ''].filter(Boolean).join(' · ');
+    renderProg('focusProg', el / tgt);
     tag.classList.toggle('paused', !running);
     $('pauseBtn').textContent = running ? 'Пауза' : 'Продолжить';
     $('extraHint').hidden = !(st.extraCount >= 2 && tgt - el > 12 * MIN);
 
     const label = free ? `${mmss(el)} фокуса` : `${mmss(tgt - el)} до перерыва`;
-    native.title(running ? `${mmss(free ? el : tgt - el)} · Фокус` : 'Пауза · NZT Focus');
+    const no = st.blocksPlan ? ` ${st.blockNo}/${st.blocksPlan}` : '';
+    native.title(running ? `${mmss(free ? el : tgt - el)} · Фокус${no}` : 'Пауза · NZT Focus');
     native.tray(`NZT Focus — ${running ? label : 'пауза'}`);
     native.progress(running ? 'normal' : 'paused', (el / tgt) * 100);
 
@@ -737,6 +739,8 @@ function tick() {
   if (st.phase === 'break') {
     const b = st.brk, left = b.endAt - t;
     $('brkClock').textContent = mmss(left);
+    // Внеплановый перерыв прервал блок — отрезок заполнен на сколько успели; обычный — блок сделан.
+    renderProg('brkProg', b.kind === 'extra' ? elapsed() / targetMs() : 1);
     setRing($('brkRing'), 1 - left / b.totalMs);
     native.title(`${mmss(left)} · Перерыв`);
     native.tray(`NZT Focus — перерыв, ещё ${mmss(left)}`);
@@ -970,8 +974,26 @@ $('extraGo').onclick = () => {
   startBreak('extra', settings.extraMin);
 };
 
+// Блоки сессии под таймером: отрезок на каждый блок — сделанные залиты, текущий заполняется вместе с таймером.
+// Номер блока — в плашке над таймером, здесь подпись словами: сколько ещё осталось после него.
+function renderProg(id, frac) {
+  const box = $(id), n = st.blocksPlan, no = st.blockNo;
+  box.hidden = !n;
+  if (!n) return;
+  const segs = box.querySelector('.segs');
+  if (segs.children.length !== n) segs.replaceChildren(...Array.from({ length: n }, () => document.createElement('i')));
+  [...segs.children].forEach((s, i) => {
+    s.style.setProperty('--f', i < no - 1 ? 1 : i === no - 1 ? Math.min(1, frac).toFixed(3) : 0);
+    s.classList.toggle('cur', i === no - 1);
+  });
+  const left = n - no, blocks = k => `${k} ${plural(k, 'блок', 'блока', 'блоков')}`;
+  box.querySelector('.seg-text').innerHTML = st.phase === 'break'
+    ? (st.brk?.kind === 'extra' ? `Блок <b>${no} из ${n}</b> на паузе` : `Сделано <b>${no} из ${n}</b> · впереди ${blocks(left)}`)
+    : left ? `После этого ещё <b>${blocks(left)}</b>` : '<b>Последний блок</b>';
+}
+
 // Название фокуса можно поменять прямо во время блока: оно попадёт в историю, мини-плашку и следующие блоки.
-// Название выглядит как поле ввода — видно, что по нему можно кликнуть. Пустое — бледная подсказка.
+// Название — обычный текст: клик по нему открывает правку. Пустое — в рамке, как поле ввода, с бледной подсказкой.
 function renderTaskTitle() {
   $('focusTask').textContent = st.task || 'Над чем работаешь?';
   $('focusTask').classList.toggle('empty', !st.task);
