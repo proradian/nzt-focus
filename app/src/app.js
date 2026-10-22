@@ -11,7 +11,7 @@ const write = (k, v) => {
 };
 
 const DEFAULTS = {
-  dur: '60', customMin: 60, breakMin: 10, longEvery: 3, longMin: 25, capMin: 90,
+  dur: '60', blocks: 4, breakMin: 10, longEvery: 3, longMin: 25, capMin: 90,
   micro: true, sound: true, notify: true, popup: true, extraMin: 5, lastTask: '', onTop: true,
   soundMode: 'entry', musicCalm: true, musicVol: 30, guard: true, closeYandex: true, theme: 'indigo'
 };
@@ -23,6 +23,12 @@ if (!settings.onTopV2) { settings.onTop = true; settings.onTopV2 = true; write(K
 // Звук в фокусе (soundMode): 'silence' — тишина, 'entry' — музыка на вход, 'music' — музыка весь блок.
 // С этой версии по умолчанию «музыка на вход»: она помогает начать, а сложная работа идёт в тишине.
 if (!settings.soundV4) { settings.soundMode = 'entry'; settings.soundV4 = true; delete settings.music; delete settings.silenceV3; write(K_SET, settings); }
+// Кнопку «Своё» заменила настройка числа блоков: своя длительность становится ближайшей из кнопок.
+if (settings.dur === 'custom') {
+  const m = settings.customMin ?? 60;
+  settings.dur = String([25, 45, 60, 90].reduce((a, b) => Math.abs(b - m) < Math.abs(a - m) ? b : a));
+  delete settings.customMin; write(K_SET, settings);
+}
 const saveSettings = () => write(K_SET, settings);
 const fx = window.FocusFx;
 fx?.setTheme(settings.theme);
@@ -445,18 +451,23 @@ const capMs = () => settings.capMin * MIN;
 
 function chosenMinutes() {
   if (settings.dur === 'free') return null;
-  if (settings.dur === 'custom') return settings.customMin;
   return +settings.dur;
 }
+
+// Сессия — несколько блоков подряд с перерывами: st.blockNo — номер текущего блока, st.blocksPlan — сколько задумано.
+// После последнего блока Focus предлагает закончить, а не начинать следующий.
+const blockOf = () => st.blocksPlan ? `блок ${st.blockNo} из ${st.blocksPlan}` : '';
+const isLastBlock = () => !!st.blocksPlan && st.blockNo >= st.blocksPlan;
 
 function rollDay() {
   if (st.day !== dayKey()) { st.day = dayKey(); st.cycle = 0; }
 }
 
-function startFocus(planMin, task, note) {
+function startFocus(planMin, task, note, blockNo = 1) {
   initAudio(); rollDay();
-  st = { ...st, phase: 'focus', task, note: note || '', planMin, basePlan: planMin, extendMin: 0, acc: 0, runFrom: now(), entryFrom: 0,
-         micro: [], extraCount: 0, brk: null, wrapAt: null, auto: 0, seen: now() };
+  const session = blockNo === 1 ? { blocksPlan: settings.blocks, sessionMin: 0 } : {};
+  st = { ...st, ...session, phase: 'focus', task, note: note || '', planMin, basePlan: planMin, extendMin: 0, acc: 0, runFrom: now(), entryFrom: 0,
+         micro: [], extraCount: 0, brk: null, wrapAt: null, auto: 0, seen: now(), blockNo, doneAt: null };
   save(); render();
   onFocusStart();
 }
@@ -471,6 +482,7 @@ function recordBlock() {
     history.push({ ts: st.wrapAt || now(), task: st.task || '', min });
     if (history.length > 2000) history = history.slice(-2000);
     write(K_HIST, history);
+    st.sessionMin = (st.sessionMin || 0) + min;
   }
   return min;
 }
@@ -493,8 +505,15 @@ function enterWrap() {
   st.phase = 'wrap'; save(); render();
   chimeEnd();
   const m = Math.round(elapsed() / MIN);
-  notify('Блок завершён', `${m} ${plural(m, 'минута', 'минуты', 'минут')} фокуса. Допиши мысль — и на перерыв.`);
+  if (isLastBlock()) notify('Последний блок завершён', `Все ${st.blocksPlan} ${plural(st.blocksPlan, 'блок', 'блока', 'блоков')} сделаны. Допиши мысль — и можно заканчивать.`);
+  else notify('Блок завершён', `${m} ${plural(m, 'минута', 'минуты', 'минут')} фокуса. Допиши мысль — и на перерыв.`);
   popup();
+}
+
+// Сессия выполнена целиком: все задуманные блоки сделаны.
+function finishSession() {
+  const n = st.blocksPlan, total = st.sessionMin || 0;
+  goHome(`Все ${n} ${plural(n, 'блок', 'блока', 'блоков')} сделаны: ${hm(total)} фокуса. Хорошая работа`);
 }
 
 function startBreak(kind, min) {
@@ -504,11 +523,27 @@ function startBreak(kind, min) {
   save(); render();
 }
 
+// Что ждёт после перерыва — для уведомлений.
+const nextUp = () => st.brk?.kind === 'extra' ? 'возвращаемся к сессии'
+  : st.blocksPlan ? `дальше блок ${st.blockNo + 1} из ${st.blocksPlan}` : 'дальше следующий блок';
+const cap = t => t[0].toUpperCase() + t.slice(1);
+
+// Уведомления о конце перерыва: за минуту до конца, в момент конца и ещё раз,
+// если через REMIND после конца человек так и не вернулся.
+const BRK_WARN = MIN, REMIND = 5 * MIN;
+function warnBreak() {
+  st.brk.warned = true; save();
+  chimeSoft();
+  notify('Перерыв скоро закончится', `Осталась минута, ${nextUp()}. Пора возвращаться к столу.`);
+}
+
 function endBreak(natural) {
-  st.phase = 'brkDone'; save(); render();
+  const next = nextUp();
+  st.phase = 'brkDone'; st.doneAt = natural ? now() : null; st.reminded = false;
+  save(); render();
   if (natural) {
     chimeBack();
-    notify('Перерыв окончен', st.note ? `Ты остановился на: ${st.note}` : 'Можно продолжать.');
+    notify('Перерыв окончен', `${cap(next)}.` + (st.note ? ` Ты остановился на: ${st.note}` : ''));
     popup();
   }
 }
@@ -556,15 +591,21 @@ function render() {
     $('stopBtn').textContent = 'Завершить';
   }
   if (st.phase === 'wrap') {
-    const m = Math.round(elapsed() / MIN);
-    $('wrapTitle').textContent = isFree()
+    const m = Math.round(elapsed() / MIN), last = isLastBlock();
+    $('wrapTag').textContent = st.blocksPlan ? `Блок ${st.blockNo} из ${st.blocksPlan} завершён` : 'Блок завершён';
+    $('wrapTitle').textContent = last
+      ? `Все ${st.blocksPlan} ${plural(st.blocksPlan, 'блок', 'блока', 'блоков')} сделаны`
+      : isFree()
       ? `${m} ${plural(m, 'минута', 'минуты', 'минут')} фокуса. Пора отдохнуть`
       : 'Блок завершён. Время отдохнуть';
     $('wrapNote').value = '';
     const kind = nextBreakKind();
-    $('takeBreakBtn').textContent = kind === 'long'
+    $('takeBreakBtn').textContent = last ? 'Закончить сессию'
+      : kind === 'long'
       ? `Длинный перерыв ${settings.longMin} мин`
       : `Перерыв ${settings.breakMin} мин`;
+    // После последнего блока «Закончить на сегодня» повторяло бы главную кнопку.
+    $('wrapEndBtn').hidden = last;
     setTimeout(() => $('wrapNote').focus(), 50);
   }
   if (st.phase === 'break') {
@@ -585,7 +626,8 @@ function render() {
         : `Продолжить · осталось ${mmss(targetMs() - elapsed())}`;
     } else {
       const m = st.basePlan !== undefined ? st.basePlan : st.planMin;
-      $('resumeBtn').textContent = m == null ? 'Начать фокус · без таймера' : `Начать фокус · ${m} мин`;
+      const no = st.blocksPlan ? ` · блок ${st.blockNo + 1} из ${st.blocksPlan}` : '';
+      $('resumeBtn').textContent = (m == null ? 'Начать фокус · без таймера' : `Начать фокус · ${m} мин`) + no;
     }
   }
   tick();
@@ -626,11 +668,13 @@ function catchUpGap(t) {
 
 function autoCloseBlock() {
   const m = recordBlock();
+  if (isLastBlock()) { finishSession(); return; }
   const kind = nextBreakKind();
   st.cycle = kind === 'long' ? 0 : st.cycle + 1;
   st.phase = 'brkDone';
   st.brk = { kind };
   st.auto = m;
+  st.doneAt = null;
   save(); render();
 }
 
@@ -642,6 +686,8 @@ function tick() {
   syncMusic();
   if (st.phase === 'idle') {
     native.title('NZT Focus'); native.tray('NZT Focus'); native.progress('none', 0);
+    // Время конца сессии в подсказке сдвигается вместе с часами.
+    native.once('blocksHint', Math.floor(t / MIN), renderBlocks);
     return;
   }
 
@@ -654,7 +700,7 @@ function tick() {
     $('focusRing').classList.toggle('paused', !running);
     setRing($('focusRing'), el / tgt);
     const tag = $('focusTag');
-    tag.textContent = running ? (st.extendMin ? `Фокус · +${st.extendMin} мин` : 'Фокус') : 'Пауза';
+    tag.textContent = [running ? 'Фокус' : 'Пауза', blockOf(), running && st.extendMin ? `+${st.extendMin} мин` : ''].filter(Boolean).join(' · ');
     tag.classList.toggle('paused', !running);
     $('pauseBtn').textContent = running ? 'Пауза' : 'Продолжить';
     $('extraHint').hidden = !(st.extraCount >= 2 && tgt - el > 12 * MIN);
@@ -694,10 +740,17 @@ function tick() {
     native.tray(`NZT Focus — перерыв, ещё ${mmss(left)}`);
     native.progress('paused', (1 - left / b.totalMs) * 100);
     if (left <= 0) endBreak(true);
+    else if (left <= BRK_WARN && !b.warned && b.totalMs > 2 * BRK_WARN) warnBreak();
     return;
   }
 
   if (st.phase === 'brkDone') {
+    if (st.doneAt && !st.reminded && t - st.doneAt >= REMIND) {
+      st.reminded = true; save();
+      chimeBack();
+      notify('Перерыв закончился 5 минут назад', `Пора возвращаться: ${nextUp()}.`);
+      popup();
+    }
     native.title('Продолжаем? · NZT Focus');
     native.tray('NZT Focus — перерыв окончен');
     native.progress('none', 0);
@@ -736,18 +789,14 @@ const DUR_HINTS = {
   '45': 'Средний блок, как школьный урок.',
   '60': 'Рекомендуемый: час работы → 10 минут отдыха. Так советуют нормы Японии, США и Великобритании.',
   '90': 'Длинный блок для глубокой работы. Дольше без отдыха лучше не тянуть.',
-  'custom': 'Своя длительность от 10 до 120 минут.',
   'free': 'Без жёсткого конца: таймер считает вверх и предложит перерыв на 60-й минуте.'
 };
 
 function renderHome() {
   $('task').value = settings.lastTask || '';
   document.querySelectorAll('#durChips button').forEach(b => b.classList.toggle('on', b.dataset.min === settings.dur));
-  $('customRow').hidden = settings.dur !== 'custom';
-  $('customRange').value = settings.customMin;
-  $('customOut').textContent = settings.customMin + ' мин';
-  $('customChip').textContent = settings.dur === 'custom' ? settings.customMin + '′' : 'Своё';
   $('durHint').textContent = DUR_HINTS[settings.dur];
+  renderBlocks();
   renderSound();
   $('helpCard').hidden = !!settings.helpSeen;
 
@@ -840,11 +889,31 @@ $('durChips').onclick = e => {
   const b = e.target.closest('button'); if (!b) return;
   settings.dur = b.dataset.min; saveSettings(); renderHome();
 };
-$('customRange').oninput = e => {
-  settings.customMin = +e.target.value; saveSettings();
-  $('customOut').textContent = settings.customMin + ' мин';
-  $('customChip').textContent = settings.customMin + '′';
-};
+
+// Сколько блоков в сессии: 60 минут × 5 блоков — примерно 5 часов работы.
+// Подсказка считает и перерывы между блоками (каждый longEvery-й — длинный), чтобы было видно время конца.
+const BLOCKS_MIN = 1, BLOCKS_MAX = 12;
+function renderBlocks() {
+  const n = settings.blocks, per = chosenMinutes() ?? 60;
+  $('blocksStep').querySelector('output').textContent = n;
+  const [minus, plus] = $('blocksStep').querySelectorAll('button');
+  minus.disabled = n <= BLOCKS_MIN; plus.disabled = n >= BLOCKS_MAX;
+  let rest = 0, cycle = st.day === dayKey() ? st.cycle : 0;
+  for (let i = 1; i < n; i++) {
+    const long = cycle + 1 >= settings.longEvery;
+    rest += long ? settings.longMin : settings.breakMin;
+    cycle = long ? 0 : cycle + 1;
+  }
+  const work = n * per, endAt = timeOf(now() + (work + rest) * MIN);
+  const approx = chosenMinutes() == null ? '≈ ' : '';
+  $('blocksHint').textContent = n === 1
+    ? `${approx}${hm(work)} фокуса, закончишь около ${endAt}.`
+    : `${n} × ${per} мин = ${approx}${hm(work)} фокуса. С перерывами ≈ ${hm(work + rest)}, закончишь около ${endAt}.`;
+}
+$('blocksStep').querySelectorAll('button').forEach((b, i) => b.onclick = () => {
+  settings.blocks = Math.max(BLOCKS_MIN, Math.min(BLOCKS_MAX, settings.blocks + (i ? 1 : -1)));
+  saveSettings(); renderBlocks();
+});
 $('task').oninput = e => { settings.lastTask = e.target.value; saveSettings(); };
 $('task').onkeydown = e => { if (e.key === 'Enter') $('startBtn').click(); };
 $('startBtn').onclick = () => startFocus(chosenMinutes(), $('task').value.trim(), '');
@@ -905,6 +974,7 @@ $('takeBreakBtn').onclick = () => {
   st.note = $('wrapNote').value.trim();
   creditWrap();
   recordBlock();
+  if (isLastBlock()) { finishSession(); return; }
   rollDay();
   const kind = nextBreakKind();
   st.cycle = kind === 'long' ? 0 : st.cycle + 1;
@@ -918,12 +988,12 @@ $('wrapEndBtn').onclick = () => {
 };
 
 // ---------- Перерыв ----------
-$('brkPlus').onclick = () => { st.brk.endAt += 5 * MIN; st.brk.totalMs += 5 * MIN; save(); render(); };
+$('brkPlus').onclick = () => { st.brk.endAt += 5 * MIN; st.brk.totalMs += 5 * MIN; st.brk.warned = false; save(); render(); };
 $('brkEndBtn').onclick = () => endBreak(false);
 
 $('resumeBtn').onclick = () => {
   if (st.brk?.kind === 'extra') { st.phase = 'focus'; st.brk = null; resumeFocus(); save(); render(); }
-  else startFocus(st.basePlan !== undefined ? st.basePlan : st.planMin, st.task, st.note);
+  else startFocus(st.basePlan !== undefined ? st.basePlan : st.planMin, st.task, st.note, (st.blockNo || 0) + 1);
 };
 $('moreRestBtn').onclick = () => startBreak(st.brk?.kind || 'regular', 5);
 $('doneEndBtn').onclick = () => {
@@ -1000,7 +1070,7 @@ $('openHist').onclick = () => {
 $('openSettings').onclick = () => { renderSettings(); openSheet('settingsSheet'); };
 
 function renderSettings() {
-  document.querySelectorAll('.stepper').forEach(s => {
+  document.querySelectorAll('#settingsSheet .stepper').forEach(s => {
     const unit = s.dataset.unit || 'мин';
     s.querySelector('output').textContent = `${settings[s.dataset.key]} ${unit}`;
   });
@@ -1043,7 +1113,7 @@ $('musicVol').oninput = $('mVol').oninput = e => {
   inv('tta_cmd', { cmd: 'volume', volume: sentVol });
 };
 renderVol();
-document.querySelectorAll('.stepper').forEach(s => {
+document.querySelectorAll('#settingsSheet .stepper').forEach(s => {
   const [minus, plus] = s.querySelectorAll('button');
   const step = d => {
     const k = s.dataset.key, v = settings[k] + d * +s.dataset.step;

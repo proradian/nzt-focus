@@ -49,14 +49,15 @@
     <button data-min="45">45</button>
     <button data-min="60">60</button>
     <button data-min="90">90</button>
-    <button data-min="custom" id="customChip">Своё</button>
     <button data-min="free" title="Секундомер без жёсткого конца">∞</button>
   </div>
-  <div id="customRow" class="custom-row" hidden>
-    <input type="range" id="customRange" min="10" max="120" step="5" value="60">
-    <output id="customOut">60 мин</output>
-  </div>
   <p class="hint" id="durHint"></p>
+
+  <div class="blocks-row">
+    <span class="field-label">Сколько блоков</span>
+    <div class="stepper" id="blocksStep"><button aria-label="Меньше блоков">−</button><output></output><button aria-label="Больше блоков">+</button></div>
+  </div>
+  <p class="hint" id="blocksHint"></p>
 
   <div class="field-label">Фон</div>
   <div class="chips sound-chips" id="soundChips">

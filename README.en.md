@@ -22,7 +22,8 @@ A research-based focus timer for Windows, built with Tauri 2.
 
 ## Features
 
-- **Focus blocks and breaks.** 60 minutes of work, then a 10–15 minute break; every third break is long, with micro-breaks every 20 minutes.
+- **Focus blocks and breaks.** 60 minutes of work, then a 10–15 minute break; every third break is long, with micro-breaks every 20 minutes. Choose how many blocks in a row (60 minutes × 5 blocks ≈ 5 hours of work) and see when you will finish, breaks included.
+- **Break reminders.** A notification one minute before a break ends, when it ends, and once more if you have not come back 5 minutes later.
 - **Honest time tracking.** When a block ends, the timer stops. Sleep and shutdown do not count as work.
 - **Distraction blocking.** During a block, Focus minimizes YouTube, VK, Instagram, Telegram Web and Yandex Music, and covers the window if you bring it back. You can switch off built-in sites and add your own by domain. In browsers the site is detected by the tab's address.
 - **Entry music.** By default a block starts with calm instrumental music from Tabletop Audio: it plays for 2 minutes, fades out evenly and is silent by minute 5. You can also choose silence or music for the whole block.
