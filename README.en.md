@@ -37,7 +37,6 @@ See the [list of studies behind each feature](docs/research/SOURCES.md) (in Russ
 - **Untampered file.** SHA-256 of `NZT-Focus-setup.exe` version 1.0.0:
   `4347774f55111406144a5175a2661b97346400b5de89a69cc3eecab445d9d8d5`
   Check in PowerShell: `Get-FileHash .\NZT-Focus-setup.exe` — the values must match.
-- **Windows warning.** The app has no paid code-signing certificate, so Windows may show "Windows protected your PC". Click "More info" → "Run anyway".
 - **What it does on your computer.** Stores data only locally in `%APPDATA%\app.focus.timer\`. During a block it reads the title and address of the active browser window to minimize distracting sites. Optionally closes the Yandex Music app. Its only network access is tabletopaudio.com for music.
 - **Your own timer instead.** Really worried about viruses? Let an AI write a timer like this for you — [prompt at the end](#prompt-build-your-own-timer).
 
