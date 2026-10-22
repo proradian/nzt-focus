@@ -206,6 +206,10 @@ body.mini{overflow:hidden}
 .stepper button{width:30px;height:30px;padding:0;border:1px solid var(--line);background:var(--glass);border-radius:8px}
 .stepper output{min-width:66px;text-align:center;font-weight:600;font-variant-numeric:tabular-nums}
 
+/* Выбор языка: две кнопки справа в строке настроек */
+.lang-chips{flex:none;flex-wrap:nowrap}
+.lang-chips button{flex:none;min-width:0;padding:7px 12px;font-size:13px}
+
 /* Выбор стиля оформления */
 .themes{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;padding:6px 0 12px;border-bottom:1px solid var(--line)}
 .themes button{display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 4px 8px;font-size:12px;font-weight:600;

@@ -26,6 +26,7 @@
   <div class="text"><b id="title">Сейчас фокус</b><span id="sub"></span></div>
   <button id="allow">Нужно для работы</button>
 </div>
+<script src="i18n.js"></script>
 <script>
   // Плашка поверх экрана: показывается программой Focus. Либо прячется сама через 6 секунд,
   // либо (sticky) висит, пока окно с сайтом на экране, и её прячет программа.
@@ -43,7 +44,9 @@
   window.showNudge = (k, isSticky = false) => {
     kind = k; sticky = isSticky;
     clearTimeout(hideTimer);            // вернулись быстро — не прятать окно после нового показа
-    document.getElementById('sub').textContent = `${NAMES[k] || k || 'Этот сайт'} подождёт до конца блока`;
+    I18N.reload();   // язык могли сменить, пока окно было скрыто
+    const site = NAMES[k] ? tr(NAMES[k]) : k || tr('Этот сайт');
+    document.getElementById('sub').textContent = tr('{site} подождёт до конца блока', { site });
     requestAnimationFrame(() => document.getElementById('card').classList.add('on'));
     clearTimeout(timer);
     if (!sticky) timer = setTimeout(hide, 6000);

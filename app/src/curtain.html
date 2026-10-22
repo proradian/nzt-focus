@@ -30,6 +30,7 @@
     <p class="hint">Переключись на рабочую вкладку сверху — занавес исчезнет сам.</p>
   </main>
 </div>
+<script src="i18n.js"></script>
 <script>
   // Занавес поверх отвлекающего окна. Показывает и прячет его программа Focus.
   const NAMES = { youtube: 'YouTube', instagram: 'Instagram', vk: 'ВКонтакте', telegram: 'Telegram', yandex: 'Яндекс Музыка' };
@@ -37,7 +38,9 @@
   let kind = new URLSearchParams(location.search).get('kind') || '';
   window.showCurtain = k => {
     kind = k;
-    document.getElementById('text').textContent = `${NAMES[k] || k || 'Этот сайт'} подождёт до конца блока.`;
+    I18N.reload();   // язык могли сменить, пока окно было скрыто
+    const site = NAMES[k] ? tr(NAMES[k]) : k || tr('Этот сайт');
+    document.getElementById('text').textContent = tr('{site} подождёт до конца блока.', { site });
   };
   document.getElementById('allow').onclick = () => {
     T?.core?.invoke('allow_distraction', { kind }).catch(() => {});

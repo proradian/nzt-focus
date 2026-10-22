@@ -30,6 +30,19 @@ fn set_tray_text(app: AppHandle, text: String) {
     }
 }
 
+/// Пункты меню трея — чтобы переводить их при смене языка интерфейса.
+struct TrayMenu {
+    open: MenuItem<tauri::Wry>,
+    quit: MenuItem<tauri::Wry>,
+}
+
+/// Язык меню трея: тексты приходят из интерфейса уже переведёнными.
+#[tauri::command]
+fn set_tray_lang(menu: tauri::State<TrayMenu>, open: String, quit: String) {
+    let _ = menu.open.set_text(open);
+    let _ = menu.quit.set_text(quit);
+}
+
 /// Красит заголовок окна в цвета темы (Windows 11; на Windows 10 просто ничего не меняется).
 /// Цвета — "#rrggbb": фон полосы и текст заголовка.
 #[tauri::command]
@@ -88,6 +101,7 @@ fn main() {
             let open = MenuItem::with_id(app, "open", "Открыть NZT Focus", true, None::<&str>)?;
             let quit = MenuItem::with_id(app, "quit", "Выйти", true, None::<&str>)?;
             let menu = Menu::with_items(app, &[&open, &quit])?;
+            app.manage(TrayMenu { open: open.clone(), quit: quit.clone() });
 
             TrayIconBuilder::with_id("main")
                 .icon(app.default_window_icon().unwrap().clone())
@@ -133,6 +147,7 @@ fn main() {
         })
         .invoke_handler(tauri::generate_handler![
             set_tray_text,
+            set_tray_lang,
             set_titlebar,
             store_get,
             store_set,

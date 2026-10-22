@@ -47,13 +47,13 @@ function mmss(ms) {
   if (m >= 100) return `${Math.floor(m / 60)}:${p(m % 60)}:${p(sec)}`;
   return `${p(m)}:${p(sec)}`;
 }
-function plural(n, one, few, many) {
-  const a = n % 10, b = n % 100;
-  if (a === 1 && b !== 11) return one;
-  if (a >= 2 && a <= 4 && (b < 12 || b > 14)) return few;
-  return many;
-}
-const hm = m => m >= 60 ? `${Math.floor(m / 60)} ч ${m % 60 ? (m % 60) + ' мин' : ''}`.trim() : `${m} мин`;
+// Язык интерфейса (i18n.js): tr() переводит строку, plural() знает и русские три формы, и английские две.
+const plural = I18N.plural;
+const en = () => I18N.lang === 'en';
+const hm = m => {
+  const [h, mn] = en() ? ['h', 'min'] : ['ч', 'мин'];
+  return m >= 60 ? `${Math.floor(m / 60)} ${h} ${m % 60 ? (m % 60) + ' ' + mn : ''}`.trim() : `${m} ${mn}`;
+};
 
 // ---------- Tauri ----------
 const T = window.__TAURI__;
@@ -93,7 +93,7 @@ let mini = false;
 function applyOnTop() {
   $('pinBtn').classList.toggle('on', !!settings.onTop);
   $('pinBtn').setAttribute('aria-pressed', String(!!settings.onTop));
-  $('pinBtn').title = settings.onTop ? 'Поверх всех окон: включено' : 'Поверх всех окон';
+  $('pinBtn').title = tr(settings.onTop ? 'Поверх всех окон: включено' : 'Поверх всех окон');
   win?.setAlwaysOnTop(!!settings.onTop || mini).catch(() => {});
 }
 
@@ -129,16 +129,16 @@ function renderMini() {
   if (st.phase === 'focus') {
     const el = elapsed(), running = !!st.runFrom, microOn = !$('microBanner').hidden;
     $('miniClock').textContent = isFree() ? mmss(el) : mmss(targetMs() - el);
-    $('miniLabel').textContent = !running ? 'Пауза'
-      : now() < distractUntil ? `${siteName(distractKind)} — после блока`
-      : microOn ? 'Микропауза: взгляд вдаль' : (st.task || 'Фокус');
+    $('miniLabel').textContent = !running ? tr('Пауза')
+      : now() < distractUntil ? tr('{site} — после блока', { site: siteName(distractKind) })
+      : microOn ? tr('Микропауза: взгляд вдаль') : (st.task || tr('Фокус'));
     dot.className = 'mini-dot' + (running ? '' : ' paused') + (microOn ? ' micro' : '');
     $('miniPause').hidden = false;
-    $('miniPause').title = running ? 'Пауза' : 'Продолжить';
+    $('miniPause').title = tr(running ? 'Пауза' : 'Продолжить');
     $('miniPauseIcon').setAttribute('d', running ? 'M6 19h4V5H6v14Zm8-14v14h4V5h-4Z' : 'M8 5v14l11-7Z');
   } else if (st.phase === 'break') {
     $('miniClock').textContent = mmss(st.brk.endAt - now());
-    $('miniLabel').textContent = 'Перерыв — отдых без экрана';
+    $('miniLabel').textContent = tr('Перерыв — отдых без экрана');
     dot.className = 'mini-dot rest';
     $('miniPause').hidden = true;
   }
@@ -146,11 +146,11 @@ function renderMini() {
 
 // Включить «поверх всех окон» можно сразу, а отключить — только подтвердив отдельной кнопкой.
 $('pinBtn').onclick = () => {
-  if (!settings.onTop) { settings.onTop = true; saveSettings(); applyOnTop(); toast('Окно поверх всех остальных'); return; }
+  if (!settings.onTop) { settings.onTop = true; saveSettings(); applyOnTop(); toast(tr('Окно поверх всех остальных')); return; }
   openSheet('onTopSheet');
 };
 $('onTopOff').onclick = () => {
-  settings.onTop = false; saveSettings(); applyOnTop(); closeSheets(); toast('Окно больше не поверх остальных');
+  settings.onTop = false; saveSettings(); applyOnTop(); closeSheets(); toast(tr('Окно больше не поверх остальных'));
 };
 $('miniBtn').onclick = () => setMini(true);
 $('miniExpand').onclick = () => setMini(false);
@@ -208,22 +208,22 @@ function syncMusic() {
   row.hidden = st.phase !== 'focus' || musicMode() === 'silence';
   // На входе панель простая: трек, ссылка на сайт, пояснение и одна кнопка входа.
   row.classList.toggle('entry', musicMode() === 'entry');
-  $('mDive').textContent = time ? 'Стоп погружения' : 'Погружение';
-  $('mDive').title = time ? 'Остановить музыку сейчас — дальше тишина' : 'Ещё раз музыка на вход: 2 минуты звучит, к 5-й минуте стихает';
+  $('mDive').textContent = tr(time ? 'Стоп погружения' : 'Погружение');
+  $('mDive').title = tr(time ? 'Остановить музыку сейчас — дальше тишина' : 'Ещё раз музыка на вход: 2 минуты звучит, к 5-й минуте стихает');
   $('musicTitle').textContent = musicTrack || 'Tabletop Audio';
-  const playing = musicMode() === 'entry' ? 'Tabletop Audio · вход' : 'Tabletop Audio · играет';
-  $('musicState').textContent = !time ? 'Tabletop Audio · тишина'
-    : musicOn ? (musicTrack ? playing : 'загружается…') : 'на паузе';
+  const playing = tr(musicMode() === 'entry' ? 'Tabletop Audio · вход' : 'Tabletop Audio · играет');
+  $('musicState').textContent = !time ? tr('Tabletop Audio · тишина')
+    : musicOn ? (musicTrack ? playing : tr('загружается…')) : tr('на паузе');
   // Пояснение в самой панели: зачем музыка на входе и почему потом тишина.
   $('musicWhy').hidden = musicMode() !== 'entry';
-  $('musicWhy').textContent = time
+  $('musicWhy').textContent = tr(time
     ? 'Музыка — для приятного начала. К 5-й минуте она стихнет: думать лучше в тишине.'
-    : 'Дальше тишина — в ней лучше думается. Захочешь музыку снова — «Погружение».';
+    : 'Дальше тишина — в ней лучше думается. Захочешь музыку снова — «Погружение».');
   row.classList.toggle('playing', musicOn && !!musicTrack);
   renderLike();
   row.classList.toggle('off', !musicOn);
   $('mToggleIcon').setAttribute('d', musicUserPaused ? 'M8 5v14l11-7Z' : 'M6 19h4V5H6v14Zm8-14v14h4V5h-4Z');
-  $('mToggle').title = musicUserPaused ? 'Включить музыку' : 'Пауза музыки';
+  $('mToggle').title = tr(musicUserPaused ? 'Включить музыку' : 'Пауза музыки');
   syncFx();
 }
 
@@ -240,7 +240,7 @@ T?.event?.listen('audio_level', e => fx?.audio(e.payload));
 async function onFocusStart() {
   inv('reset_allowed');
   musicUserPaused = false;
-  if (settings.closeYandex && await inv('close_yandex_music')) toast('Яндекс Музыка закрыта на время фокуса');
+  if (settings.closeYandex && await inv('close_yandex_music')) toast(tr('Яндекс Музыка закрыта на время фокуса'));
 }
 
 T?.event?.listen('tta-track', e => { musicTrack = e.payload || ''; syncMusic(); });
@@ -253,13 +253,13 @@ function renderLike() {
   $('mLike').hidden = !musicTrack;
   $('mLike').classList.toggle('on', on);
   $('mLike').setAttribute('aria-pressed', String(on));
-  $('mLike').title = on ? 'Убрать из понравившихся' : 'Нравится — сохранить трек';
+  $('mLike').title = tr(on ? 'Убрать из понравившихся' : 'Нравится — сохранить трек');
   $('mLikeIcon').setAttribute('d', on ? HEART : HEART_O);
 }
 $('mLike').onclick = () => {
   if (!musicTrack) return;
-  if (isLiked(musicTrack)) { settings.liked = liked().filter(x => x.title !== musicTrack); toast('Убрано из понравившихся'); }
-  else { liked().unshift({ title: musicTrack, at: now() }); toast(`«${musicTrack}» — в понравившихся`); }
+  if (isLiked(musicTrack)) { settings.liked = liked().filter(x => x.title !== musicTrack); toast(tr('Убрано из понравившихся')); }
+  else { liked().unshift({ title: musicTrack, at: now() }); toast(tr('«{track}» — в понравившихся', { track: musicTrack })); }
   saveSettings(); renderLike();
 };
 function renderLiked() {
@@ -267,7 +267,7 @@ function renderLiked() {
   $('likedCount').textContent = liked().length ? String(liked().length) : '';
   if (!liked().length) {
     const li = document.createElement('li'); li.className = 'empty';
-    li.textContent = 'Пока пусто. Нажми ♡ рядом с треком во время фокуса.';
+    li.textContent = tr('Пока пусто. Нажми ♡ рядом с треком во время фокуса.');
     list.append(li); return;
   }
   liked().forEach(x => {
@@ -275,7 +275,7 @@ function renderLiked() {
     const name = document.createElement('span');
     const heart = document.createElement('span'); heart.className = 'heart'; heart.textContent = '♥';
     name.append(heart, x.title);
-    const del = document.createElement('button'); del.className = 'ghost'; del.textContent = 'Убрать';
+    const del = document.createElement('button'); del.className = 'ghost'; del.textContent = tr('Убрать');
     del.onclick = () => { settings.liked = liked().filter(y => y.title !== x.title); saveSettings(); renderLiked(); renderLike(); };
     li.append(name, del); list.append(li);
   });
@@ -292,7 +292,8 @@ $('mDive').onclick = () => {
 $('mShow').onclick = async () => { if (!await inv('tta_show')) { musicOn = false; syncMusic(); } };
 
 const SITE_NAMES = { youtube: 'YouTube', instagram: 'Instagram', vk: 'ВКонтакте', telegram: 'Telegram', yandex: 'Яндекс Музыка' };
-const DISTRACT = { youtube: 'YouTube свёрнут', instagram: 'Instagram свёрнут', vk: 'ВКонтакте свёрнут', telegram: 'Telegram свёрнут', yandex: 'Яндекс Музыка свёрнута' };
+// «Свёрнут / свёрнута» — по роду названия; Яндекс Музыка — единственная женского рода.
+const distractTitle = kind => kind === 'yandex' ? tr('Яндекс Музыка свёрнута') : tr('{site} свёрнут', { site: siteName(kind) });
 let distractKind = null, distractTimer = null;
 // again — повторное напоминание: окно уже сворачивали, теперь только надпись, без перехвата окна.
 let distractUntil = 0;
@@ -300,9 +301,9 @@ function showDistraction(kind, again = false) {
   if (st.phase !== 'focus') return;
   distractKind = kind;
   distractUntil = now() + 8000;
-  $('distractTitle').textContent = again ? `${siteName(kind)} — после блока` : (DISTRACT[kind] || `${siteName(kind)} свёрнут`);
-  $('distractText').textContent = again ? 'Сейчас фокус. Если это нужно для работы — нажми кнопку справа.' : 'Сейчас фокус. Вернёшься к нему после блока.';
-  $('distractAllow').textContent = 'Нужно для работы';
+  $('distractTitle').textContent = again ? tr('{site} — после блока', { site: siteName(kind) }) : distractTitle(kind);
+  $('distractText').textContent = tr(again ? 'Сейчас фокус. Если это нужно для работы — нажми кнопку справа.' : 'Сейчас фокус. Вернёшься к нему после блока.');
+  $('distractAllow').textContent = tr('Нужно для работы');
   $('distractBanner').hidden = false;
   clearTimeout(distractTimer);
   distractTimer = setTimeout(() => $('distractBanner').hidden = true, 12000);
@@ -314,7 +315,7 @@ $('distractOk').onclick = () => { $('distractBanner').hidden = true; };
 $('distractAllow').onclick = () => {
   inv('allow_distraction', { kind: distractKind });
   $('distractBanner').hidden = true;
-  toast('Хорошо, до конца блока не трогаю');
+  toast(tr('Хорошо, до конца блока не трогаю'));
 };
 T?.event?.listen('distraction', e => showDistraction(e.payload));
 
@@ -330,7 +331,7 @@ const BUILTIN_SITES = [
   { kind: 'yandex', host: 'music.yandex.ru', is: h => h.startsWith('music.yandex.') },
 ];
 const MAX_SITES = 200;   // столько же принимает guard.rs (set_sites)
-function siteName(kind) { return SITE_NAMES[kind] || kind || 'Сайт'; }
+function siteName(kind) { return SITE_NAMES[kind] ? tr(SITE_NAMES[kind]) : kind || tr('Сайт'); }
 const sitesOff = () => (settings.sitesOff ||= []);
 const mySites = () => (settings.sites ||= []);
 const under = (host, d) => host === d || host.endsWith('.' + d);
@@ -356,12 +357,12 @@ function renderSites() {
   BUILTIN_SITES.forEach(s => {
     const li = document.createElement('li');
     const label = document.createElement('label'); label.className = 'site-on';
-    const name = document.createElement('span'); name.textContent = SITE_NAMES[s.kind];
+    const name = document.createElement('span'); name.textContent = siteName(s.kind);
     const host = document.createElement('span'); host.className = 'host'; host.textContent = s.host;
     name.append(host);
     const box = document.createElement('input'); box.type = 'checkbox';
     box.checked = !sitesOff().includes(s.kind);
-    box.setAttribute('aria-label', SITE_NAMES[s.kind]);
+    box.setAttribute('aria-label', siteName(s.kind));
     box.onchange = () => {
       settings.sitesOff = box.checked ? sitesOff().filter(k => k !== s.kind) : [...sitesOff(), s.kind];
       saveSettings(); pushSites(); renderSites();
@@ -371,7 +372,7 @@ function renderSites() {
   mySites().forEach(h => {
     const li = document.createElement('li');
     const name = document.createElement('span'); name.textContent = h;
-    const del = document.createElement('button'); del.type = 'button'; del.className = 'ghost'; del.textContent = 'Убрать';
+    const del = document.createElement('button'); del.type = 'button'; del.className = 'ghost'; del.textContent = tr('Убрать');
     del.onclick = () => { settings.sites = mySites().filter(x => x !== h); saveSettings(); pushSites(); renderSites(); };
     li.append(name, del); list.append(li);
   });
@@ -385,25 +386,25 @@ $('siteAdd').onsubmit = e => {
   const text = $('siteInput').value;
   if (!text.trim()) return;
   const h = normHost(text);
-  if (!h) return siteHint('Не похоже на адрес сайта. Пример: twitch.tv', true);
+  if (!h) return siteHint(tr('Не похоже на адрес сайта. Пример: twitch.tv'), true);
   const b = BUILTIN_SITES.find(s => s.is(h));
   if (b) {
     if (sitesOff().includes(b.kind)) {
       settings.sitesOff = sitesOff().filter(k => k !== b.kind);
       saveSettings(); pushSites(); renderSites();
-      siteHint(`${SITE_NAMES[b.kind]} уже есть в списке — включил`);
-    } else siteHint(`${SITE_NAMES[b.kind]} уже есть в списке`);
+      siteHint(tr('{site} уже есть в списке — включил', { site: siteName(b.kind) }));
+    } else siteHint(tr('{site} уже есть в списке', { site: siteName(b.kind) }));
     $('siteInput').value = '';
     return;
   }
   const same = mySites().find(d => under(h, d));
-  if (same) return siteHint(`${same} уже в списке`, true);
-  if (mySites().filter(d => !under(d, h)).length >= MAX_SITES) return siteHint(`Можно добавить не больше ${MAX_SITES} сайтов`, true);
+  if (same) return siteHint(tr('{site} уже в списке', { site: same }), true);
+  if (mySites().filter(d => !under(d, h)).length >= MAX_SITES) return siteHint(tr('Можно добавить не больше {n} сайтов', { n: MAX_SITES }), true);
   // Добавили домен шире уже записанного (vk.com после m.vk.com) — узкий больше не нужен.
   settings.sites = [...mySites().filter(d => !under(d, h)), h];
   saveSettings(); pushSites(); renderSites();
   $('siteInput').value = '';
-  siteHint(`${h} и его поддомены будут сворачиваться во время фокуса`);
+  siteHint(tr('{site} и его поддомены будут сворачиваться во время фокуса', { site: h }));
 };
 pushSites();
 
@@ -493,7 +494,7 @@ function enterWrap() {
   st.phase = 'wrap'; save(); render();
   chimeEnd();
   const m = Math.round(elapsed() / MIN);
-  notify('Блок завершён', `${m} ${plural(m, 'минута', 'минуты', 'минут')} фокуса. Допиши мысль — и на перерыв.`);
+  notify(tr('Блок завершён'), tr('{n} {minutes} фокуса. Допиши мысль — и на перерыв.', { n: m, minutes: plural(m, 'минута', 'минуты', 'минут') }));
   popup();
 }
 
@@ -508,7 +509,7 @@ function endBreak(natural) {
   st.phase = 'brkDone'; save(); render();
   if (natural) {
     chimeBack();
-    notify('Перерыв окончен', st.note ? `Ты остановился на: ${st.note}` : 'Можно продолжать.');
+    notify(tr('Перерыв окончен'), st.note ? tr('Ты остановился на: {note}', { note: st.note }) : tr('Можно продолжать.'));
     popup();
   }
 }
@@ -532,10 +533,10 @@ const IDEAS = {
 };
 function pickIdea(kind) {
   const list = kind === 'long' ? IDEAS.long : IDEAS.short;
+  // Храним русский текст: он ключ перевода, а язык можно сменить посреди перерыва.
   let idea = list[Math.floor(Math.random() * list.length)];
   const h = new Date().getHours() + new Date().getMinutes() / 60;
-  if (kind === 'long' && h >= 12.5 && h <= 15) idea += ' Можно вздремнуть 15–20 минут — но не дольше 30.';
-  return idea;
+  return kind === 'long' && h >= 12.5 && h <= 15 ? [idea, ' Можно вздремнуть 15–20 минут — но не дольше 30.'] : [idea];
 }
 
 // ---------- Отрисовка ----------
@@ -549,43 +550,44 @@ function render() {
   $('openSettings').hidden = st.phase !== 'idle';
   if (st.phase === 'idle') renderHome();
   if (st.phase === 'focus') {
-    $('focusTask').textContent = st.task || 'Фокус-сессия';
+    $('focusTask').textContent = st.task || tr('Фокус-сессия');
     $('noteCard').hidden = !st.note;
     $('noteText').textContent = st.note || '';
     $('microBanner').hidden = true;
-    $('stopBtn').textContent = 'Завершить';
+    $('stopBtn').textContent = tr('Завершить');
   }
   if (st.phase === 'wrap') {
     const m = Math.round(elapsed() / MIN);
     $('wrapTitle').textContent = isFree()
-      ? `${m} ${plural(m, 'минута', 'минуты', 'минут')} фокуса. Пора отдохнуть`
-      : 'Блок завершён. Время отдохнуть';
+      ? tr('{n} {minutes} фокуса. Пора отдохнуть', { n: m, minutes: plural(m, 'минута', 'минуты', 'минут') })
+      : tr('Блок завершён. Время отдохнуть');
     $('wrapNote').value = '';
     const kind = nextBreakKind();
     $('takeBreakBtn').textContent = kind === 'long'
-      ? `Длинный перерыв ${settings.longMin} мин`
-      : `Перерыв ${settings.breakMin} мин`;
+      ? tr('Длинный перерыв {n} мин', { n: settings.longMin })
+      : tr('Перерыв {n} мин', { n: settings.breakMin });
     setTimeout(() => $('wrapNote').focus(), 50);
   }
   if (st.phase === 'break') {
     const b = st.brk;
-    const lbl = { regular: 'Перерыв', long: 'Длинный перерыв', extra: 'Внеплановый перерыв' }[b.kind];
-    $('brkTag').textContent = `${lbl} · ${Math.round(b.totalMs / MIN)} мин`;
-    $('brkIdea').textContent = b.idea;
+    const lbl = tr({ regular: 'Перерыв', long: 'Длинный перерыв', extra: 'Внеплановый перерыв' }[b.kind]);
+    $('brkTag').textContent = tr('{label} · {n} мин', { label: lbl, n: Math.round(b.totalMs / MIN) });
+    // Идея — русский текст (ключ перевода), у старых записей — строка, у новых — части.
+    $('brkIdea').textContent = [].concat(b.idea || []).map(x => tr(x)).join('');
   }
   if (st.phase === 'brkDone') {
     const extra = st.brk?.kind === 'extra';
-    $('doneTitle').textContent = extra ? 'Возвращаемся к сессии'
-      : st.auto ? `Ты отходил — блок засчитан: ${hm(st.auto)}` : 'Готов к следующему блоку?';
+    $('doneTitle').textContent = extra ? tr('Возвращаемся к сессии')
+      : st.auto ? tr('Ты отходил — блок засчитан: {time}', { time: hm(st.auto) }) : tr('Готов к следующему блоку?');
     $('doneNoteCard').hidden = !st.note;
     $('doneNote').textContent = st.note || '';
     if (extra) {
       $('resumeBtn').textContent = isFree()
-        ? 'Продолжить сессию'
-        : `Продолжить · осталось ${mmss(targetMs() - elapsed())}`;
+        ? tr('Продолжить сессию')
+        : tr('Продолжить · осталось {time}', { time: mmss(targetMs() - elapsed()) });
     } else {
       const m = st.basePlan !== undefined ? st.basePlan : st.planMin;
-      $('resumeBtn').textContent = m == null ? 'Начать фокус · без таймера' : `Начать фокус · ${m} мин`;
+      $('resumeBtn').textContent = m == null ? tr('Начать фокус · без таймера') : tr('Начать фокус · {n} мин', { n: m });
     }
   }
   tick();
@@ -619,7 +621,7 @@ function catchUpGap(t) {
     autoCloseBlock();
   } else {
     save(); render();
-    toast('Компьютер спал или был выключен — сессия на паузе');
+    toast(tr('Компьютер спал или был выключен — сессия на паузе'));
   }
   return true;
 }
@@ -649,19 +651,19 @@ function tick() {
     const el = elapsed(), tgt = targetMs(), running = !!st.runFrom;
     const free = isFree();
     $('focusClock').textContent = free ? mmss(el) : mmss(tgt - el);
-    $('focusSub').textContent = !running ? 'пауза' : free ? 'прошло' : 'осталось';
+    $('focusSub').textContent = tr(!running ? 'пауза' : free ? 'прошло' : 'осталось');
     $('focusClock').classList.toggle('paused', !running);
     $('focusRing').classList.toggle('paused', !running);
     setRing($('focusRing'), el / tgt);
     const tag = $('focusTag');
-    tag.textContent = running ? (st.extendMin ? `Фокус · +${st.extendMin} мин` : 'Фокус') : 'Пауза';
+    tag.textContent = running ? (st.extendMin ? tr('Фокус · +{n} мин', { n: st.extendMin }) : tr('Фокус')) : tr('Пауза');
     tag.classList.toggle('paused', !running);
-    $('pauseBtn').textContent = running ? 'Пауза' : 'Продолжить';
+    $('pauseBtn').textContent = tr(running ? 'Пауза' : 'Продолжить');
     $('extraHint').hidden = !(st.extraCount >= 2 && tgt - el > 12 * MIN);
 
-    const label = free ? `${mmss(el)} фокуса` : `${mmss(tgt - el)} до перерыва`;
-    native.title(running ? `${mmss(free ? el : tgt - el)} · Фокус` : 'Пауза · NZT Focus');
-    native.tray(`NZT Focus — ${running ? label : 'пауза'}`);
+    const label = free ? tr('{time} фокуса', { time: mmss(el) }) : tr('{time} до перерыва', { time: mmss(tgt - el) });
+    native.title(running ? tr('{time} · Фокус', { time: mmss(free ? el : tgt - el) }) : tr('Пауза · NZT Focus'));
+    native.tray(`NZT Focus — ${running ? label : tr('пауза')}`);
     native.progress(running ? 'normal' : 'paused', (el / tgt) * 100);
 
     if (running) {
@@ -678,10 +680,10 @@ function tick() {
     $('overtimeVal').textContent = '+' + mmss(away);
     $('extendBtn').disabled = elapsed() >= capMs();
     $('wrapText').textContent = elapsed() >= capMs()
-      ? `Это уже ${Math.round(elapsed() / MIN)} минут подряд — дальше внимание заметно падает. Лучше отдохнуть.`
-      : 'Если ты посреди мысли — допиши её: до 10 минут после конца блока засчитаются.';
-    native.title('Перерыв? · NZT Focus');
-    native.tray('NZT Focus — время перерыва');
+      ? tr('Это уже {n} минут подряд — дальше внимание заметно падает. Лучше отдохнуть.', { n: Math.round(elapsed() / MIN) })
+      : tr('Если ты посреди мысли — допиши её: до 10 минут после конца блока засчитаются.');
+    native.title(tr('Перерыв? · NZT Focus'));
+    native.tray(tr('NZT Focus — время перерыва'));
     native.progress('paused', 100);
     return;
   }
@@ -690,16 +692,16 @@ function tick() {
     const b = st.brk, left = b.endAt - t;
     $('brkClock').textContent = mmss(left);
     setRing($('brkRing'), 1 - left / b.totalMs);
-    native.title(`${mmss(left)} · Перерыв`);
-    native.tray(`NZT Focus — перерыв, ещё ${mmss(left)}`);
+    native.title(tr('{time} · Перерыв', { time: mmss(left) }));
+    native.tray(tr('NZT Focus — перерыв, ещё {time}', { time: mmss(left) }));
     native.progress('paused', (1 - left / b.totalMs) * 100);
     if (left <= 0) endBreak(true);
     return;
   }
 
   if (st.phase === 'brkDone') {
-    native.title('Продолжаем? · NZT Focus');
-    native.tray('NZT Focus — перерыв окончен');
+    native.title(tr('Продолжаем? · NZT Focus'));
+    native.tray(tr('NZT Focus — перерыв окончен'));
     native.progress('none', 0);
   }
 }
@@ -720,7 +722,7 @@ function showMicro() {
   $('microLeft').textContent = left;
   $('microBanner').hidden = false;
   chimeSoft();
-  notify('Микропауза', 'Отведи взгляд вдаль на 20 секунд. Можно не отвлекаться от мысли.');
+  notify(tr('Микропауза'), tr('Отведи взгляд вдаль на 20 секунд. Можно не отвлекаться от мысли.'));
   clearInterval(microTimer);
   microTimer = setInterval(() => {
     left--; $('microLeft').textContent = left;
@@ -745,28 +747,28 @@ function renderHome() {
   document.querySelectorAll('#durChips button').forEach(b => b.classList.toggle('on', b.dataset.min === settings.dur));
   $('customRow').hidden = settings.dur !== 'custom';
   $('customRange').value = settings.customMin;
-  $('customOut').textContent = settings.customMin + ' мин';
-  $('customChip').textContent = settings.dur === 'custom' ? settings.customMin + '′' : 'Своё';
-  $('durHint').textContent = DUR_HINTS[settings.dur];
+  $('customOut').textContent = settings.customMin + ' ' + tr('мин');
+  $('customChip').textContent = settings.dur === 'custom' ? settings.customMin + '′' : tr('Своё');
+  $('durHint').textContent = tr(DUR_HINTS[settings.dur]);
   renderSound();
   $('helpCard').hidden = !!settings.helpSeen;
 
   const today = history.filter(h => dayKey(h.ts) === dayKey());
   const tMin = today.reduce((a, h) => a + h.min, 0);
   $('todayLine').textContent = today.length
-    ? `Сегодня: ${today.length} ${plural(today.length, 'блок', 'блока', 'блоков')} · ${hm(tMin)}`
-    : 'Сегодня ещё ни одного блока';
+    ? tr('Сегодня: {n} {blocks} · {time}', { n: today.length, blocks: plural(today.length, 'блок', 'блока', 'блоков'), time: hm(tMin) })
+    : tr('Сегодня ещё ни одного блока');
   const lim = $('limitCard');
   // Ориентир — часы фокуса, а не число блоков: блоки бывают и по 15 минут.
   lim.hidden = tMin < 240;
   if (!lim.hidden) lim.querySelector('p').innerHTML =
-    `Сегодня уже <b>${hm(tMin)}</b> фокуса. По исследованиям, глубокой работы в день выходит около 4 часов — это ориентир, а не правило. Остановиться сейчас — нормально.`;
+    tr('Сегодня уже <b>{time}</b> фокуса. По исследованиям, глубокой работы в день выходит около 4 часов — это ориентир, а не правило. Остановиться сейчас — нормально.', { time: hm(tMin) });
 
   // Неделя
   const days = [];
   for (let i = 6; i >= 0; i--) {
     const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - i);
-    days.push({ key: dayKey(d.getTime()), label: d.toLocaleDateString('ru-RU', { weekday: 'short' }).slice(0, 2), min: 0, blocks: [], today: i === 0 });
+    days.push({ key: dayKey(d.getTime()), label: d.toLocaleDateString(I18N.locale(), { weekday: 'short' }).slice(0, 2), min: 0, blocks: [], today: i === 0 });
   }
   [...history].sort((a, b) => a.ts - b.ts).forEach(h => {
     const d = days.find(x => x.key === dayKey(h.ts));
@@ -816,7 +818,7 @@ function renderWeek(days) {
   });
 }
 
-const timeOf = ts => new Date(ts).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+const timeOf = ts => new Date(ts).toLocaleTimeString(I18N.locale(), { hour: '2-digit', minute: '2-digit' });
 
 // Пояснения по исследованиям (docs/research/reports/Музыка и звук при работе.md): музыка без слов
 // поднимает настроение и бодрость, но мышлению не помогает; для сложной работы лучше тишина.
@@ -828,7 +830,7 @@ const SOUND_HINTS = {
 // Выбор звука — на главном экране и в настройках, оба показывают одно и то же.
 function renderSound() {
   document.querySelectorAll('.sound-chips button').forEach(b => b.classList.toggle('on', b.dataset.sound === musicMode()));
-  document.querySelectorAll('.sound-hint').forEach(p => p.textContent = SOUND_HINTS[musicMode()]);
+  document.querySelectorAll('.sound-hint').forEach(p => p.textContent = tr(SOUND_HINTS[musicMode()]));
 }
 document.querySelectorAll('.sound-chips').forEach(c => c.onclick = e => {
   const b = e.target.closest('button'); if (!b) return;
@@ -842,7 +844,7 @@ $('durChips').onclick = e => {
 };
 $('customRange').oninput = e => {
   settings.customMin = +e.target.value; saveSettings();
-  $('customOut').textContent = settings.customMin + ' мин';
+  $('customOut').textContent = settings.customMin + ' ' + tr('мин');
   $('customChip').textContent = settings.customMin + '′';
 };
 $('task').oninput = e => { settings.lastTask = e.target.value; saveSettings(); };
@@ -855,13 +857,13 @@ $('pauseBtn').onclick = () => { st.runFrom ? pauseFocus() : resumeFocus(); save(
 let stopArmed = null;
 $('stopBtn').onclick = () => {
   if (!stopArmed) {
-    $('stopBtn').textContent = 'Точно завершить?';
-    stopArmed = setTimeout(() => { stopArmed = null; $('stopBtn').textContent = 'Завершить'; }, 3000);
+    $('stopBtn').textContent = tr('Точно завершить?');
+    stopArmed = setTimeout(() => { stopArmed = null; $('stopBtn').textContent = tr('Завершить'); }, 3000);
     return;
   }
   clearTimeout(stopArmed); stopArmed = null;
   const m = recordBlock();
-  goHome(m >= 1 ? `Сохранено: ${hm(m)} фокуса` : 'Сессия отменена');
+  goHome(m >= 1 ? tr('Сохранено: {time} фокуса', { time: hm(m) }) : tr('Сессия отменена'));
 };
 
 $('extraBreakBtn').onclick = () => {
@@ -887,7 +889,7 @@ $('extraGo').onclick = () => {
 
 $('shortenBtn').onclick = () => {
   st.planMin = Math.ceil(elapsed() / MIN) + 10; st.extendMin = 0; save();
-  toast('Блок закончится через 10 минут');
+  toast(tr('Блок закончится через 10 минут'));
   tick();
 };
 
@@ -914,7 +916,7 @@ $('wrapNote').onkeydown = e => { if (e.key === 'Enter') $('takeBreakBtn').click(
 $('wrapEndBtn').onclick = () => {
   creditWrap();
   const m = recordBlock();
-  goHome(`Сохранено: ${hm(m)} фокуса. Хорошая работа`);
+  goHome(tr('Сохранено: {time} фокуса. Хорошая работа', { time: hm(m) }));
 };
 
 // ---------- Перерыв ----------
@@ -929,7 +931,7 @@ $('moreRestBtn').onclick = () => startBreak(st.brk?.kind || 'regular', 5);
 $('doneEndBtn').onclick = () => {
   let m = 0;
   if (st.brk?.kind === 'extra') m = recordBlock();
-  goHome(m ? `Сохранено: ${hm(m)} фокуса` : 'До встречи. Хорошая работа');
+  goHome(m ? tr('Сохранено: {time} фокуса', { time: hm(m) }) : tr('До встречи. Хорошая работа'));
 };
 
 // ---------- Листы ----------
@@ -954,7 +956,7 @@ $('helpCardClose').onclick = () => { settings.helpSeen = true; saveSettings(); $
 $('helpToWhy').onclick = () => { closeSheets(); openSheet('whySheet'); };
 
 // Короткая подпись над столбиком: «45м», «1:30».
-function short(m) { return m < 60 ? `${m}м` : `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`; }
+function short(m) { return m < 60 ? `${m}${en() ? 'm' : 'м'}` : `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`; }
 
 $('openHist').onclick = () => {
   const byDay = new Map();
@@ -967,7 +969,7 @@ $('openHist').onclick = () => {
   const days = [...byDay.values()].sort((a, b) => b.ts - a.ts);
   const list = $('daysList'); list.innerHTML = '';
   if (!days.length) {
-    const li = document.createElement('li'); li.className = 'muted'; li.textContent = 'Пока пусто — здесь появятся дни с завершёнными блоками.';
+    const li = document.createElement('li'); li.className = 'muted'; li.textContent = tr('Пока пусто — здесь появятся дни с завершёнными блоками.');
     list.append(li);
   }
   days.forEach(d => {
@@ -975,7 +977,7 @@ $('openHist').onclick = () => {
     const left = document.createElement('div');
     const date = document.createElement('div');
     date.className = 'd-date' + (dayKey(d.ts) === dayKey() ? ' today' : '');
-    date.textContent = new Date(d.ts).toLocaleDateString('ru-RU', { weekday: 'short', day: 'numeric', month: 'long' });
+    date.textContent = new Date(d.ts).toLocaleDateString(I18N.locale(), { weekday: 'short', day: 'numeric', month: 'long' });
     const tasks = document.createElement('div'); tasks.className = 'd-tasks';
     tasks.textContent = `${d.n} ${plural(d.n, 'блок', 'блока', 'блоков')}` + (d.tasks.size ? ' · ' + [...d.tasks].join(', ') : '');
     // Блоки дня: когда были и сколько длились.
@@ -984,7 +986,7 @@ $('openHist').onclick = () => {
       const c = document.createElement('span');
       const dot = document.createElement('i');
       c.append(dot, `${timeOf(h.ts - h.min * MIN)}–${timeOf(h.ts)} · ${short(h.min)}`);
-      c.title = `${n + 1}-й блок${h.task ? ' · ' + h.task : ''}`;
+      c.title = tr('{n}-й блок', { n: n + 1 }) + (h.task ? ' · ' + h.task : '');
       chips.append(c);
     });
     left.append(date, tasks, chips);
@@ -993,7 +995,7 @@ $('openHist').onclick = () => {
   });
   const all = days.reduce((a, d) => a + d.min, 0);
   $('histSummary').textContent = days.length
-    ? `Всего: ${hm(all)} за ${days.length} ${plural(days.length, 'день', 'дня', 'дней')}, в среднем ${hm(Math.round(all / days.length))} в день`
+    ? tr('Всего: {all} за {n} {days}, в среднем {avg} в день', { all: hm(all), n: days.length, days: plural(days.length, 'день', 'дня', 'дней'), avg: hm(Math.round(all / days.length)) })
     : '';
   openSheet('histSheet');
 };
@@ -1001,7 +1003,7 @@ $('openSettings').onclick = () => { renderSettings(); openSheet('settingsSheet')
 
 function renderSettings() {
   document.querySelectorAll('.stepper').forEach(s => {
-    const unit = s.dataset.unit || 'мин';
+    const unit = tr(s.dataset.unit || 'мин');
     s.querySelector('output').textContent = `${settings[s.dataset.key]} ${unit}`;
   });
   document.querySelectorAll('#settingsSheet input[type=checkbox][data-key]').forEach(c => c.checked = !!settings[c.dataset.key]);
@@ -1010,6 +1012,7 @@ function renderSettings() {
   renderLiked();
   renderSites();
   renderThemes();
+  renderLang();
 }
 
 // Стили оформления: кружок — цвета темы на её фоне.
@@ -1027,11 +1030,33 @@ function renderThemes() {
     sw.style.background = th.cycle
       ? `conic-gradient(from 200deg, ${th.cycle.map(c => c.acc[0]).join(', ')}, ${th.cycle[0].acc[0]})`
       : `radial-gradient(circle at 30% 30%, ${v.f1}, ${v.f2} 60%, ${v.bg})`;
-    b.append(sw, th.name);
+    b.append(sw, tr(th.name));
     b.onclick = () => { settings.theme = id; saveSettings(); fx.setTheme(id); renderThemes(); };
     box.append(b);
   });
 }
+// Язык интерфейса: переключается сразу — неподвижный текст переводит I18N.apply(), остальное
+// перерисовывается. Меню трея переводит Rust (set_tray_lang).
+function renderLang() {
+  $('langAlt').hidden = I18N.lang === 'en';   // подсказка «Language» нужна только в русском — чтобы найти, где язык
+  document.querySelectorAll('#langChips button').forEach(b => b.classList.toggle('on', b.dataset.lang === I18N.lang));
+}
+function applyLang() {
+  I18N.apply();
+  inv('set_tray_lang', { open: tr('Открыть NZT Focus'), quit: tr('Выйти') });
+}
+$('langChips').onclick = e => {
+  const b = e.target.closest('button'); if (!b || b.dataset.lang === I18N.lang) return;
+  settings.lang = b.dataset.lang; saveSettings();
+  I18N.set(settings.lang);
+  applyLang();
+  native.last = {};          // заголовок окна и подсказку трея — заново на новом языке
+  const open = !$('settingsSheet').hidden;
+  render();                  // render закрывает листы — настройки открываем обратно
+  renderSettings();
+  if (open) openSheet('settingsSheet');
+};
+
 // Громкость: ползунок в настройках и ползунок у музыки на экране фокуса показывают одно и то же.
 function renderVol() {
   $('musicVol').value = $('mVol').value = settings.musicVol;
@@ -1054,22 +1079,22 @@ document.querySelectorAll('.stepper').forEach(s => {
 });
 document.querySelectorAll('#settingsSheet input[type=checkbox][data-key]').forEach(c => c.onchange = () => {
   settings[c.dataset.key] = c.checked; saveSettings();
-  if (c.dataset.key === 'notify' && c.checked) notify('NZT Focus', 'Уведомления включены');
+  if (c.dataset.key === 'notify' && c.checked) notify('NZT Focus', tr('Уведомления включены'));
   if (c.dataset.key === 'musicCalm' && musicOn) inv('tta_cmd', { cmd: 'shuffle', ...musicArgs() });
   if (c.dataset.key === 'guard') renderSites();
 });
 let clearArmed = null;
 $('clearHist').onclick = () => {
   if (!clearArmed) {
-    $('clearHist').textContent = 'Нажми ещё раз, чтобы удалить';
-    clearArmed = setTimeout(() => { clearArmed = null; $('clearHist').textContent = 'Очистить историю'; }, 3000);
+    $('clearHist').textContent = tr('Нажми ещё раз, чтобы удалить');
+    clearArmed = setTimeout(() => { clearArmed = null; $('clearHist').textContent = tr('Очистить историю'); }, 3000);
     return;
   }
   clearTimeout(clearArmed); clearArmed = null;
   settings.histClearedAt = now(); saveSettings();
   history = []; write(K_HIST, history);
-  $('clearHist').textContent = 'Очистить историю';
-  toast('История очищена');
+  $('clearHist').textContent = tr('Очистить историю');
+  toast(tr('История очищена'));
   if (st.phase === 'idle') renderHome();
 };
 
@@ -1080,7 +1105,7 @@ win?.onCloseRequested(async e => {
   if (st.phase === 'idle') { await inv('tta_close'); return; }
   e.preventDefault();
   await win.hide();
-  if (!trayHinted) { trayHinted = true; notify('NZT Focus работает в трее', 'Таймер идёт. Открыть — клик по значку у часов.'); }
+  if (!trayHinted) { trayHinted = true; notify(tr('NZT Focus работает в трее'), tr('Таймер идёт. Открыть — клик по значку у часов.')); }
 });
 
 // ---------- Старт ----------
@@ -1098,6 +1123,8 @@ win?.onCloseRequested(async e => {
     st = { ...IDLE, cycle: st.cycle, day: st.day };
   }
   save();
+  I18N.set(settings.lang);   // файл настроек главный: язык берём из него, а не из кэша движка
+  applyLang();
   render();
   applyOnTop();
 })();
