@@ -41,8 +41,8 @@ const I18N = (() => {
     'Длинный блок для глубокой работы. Дольше без отдыха лучше не тянуть.': "A long block for deep work. Better not to go longer without rest.",
     'Своя длительность от 10 до 120 минут.': 'Your own duration, from 10 to 120 minutes.',
     'Без жёсткого конца: таймер считает вверх и предложит перерыв на 60-й минуте.': 'No fixed end: the timer counts up and suggests a break at minute 60.',
-    'Музыка делает начало приятнее, а думать лучше в тишине. Поэтому 2 минуты звучит спокойная музыка без слов, потом она плавно стихает, и к 5-й минуте — тишина. Захочешь войти ещё раз — кнопка «Погружение».':
-      'Music makes the start more pleasant, but thinking works better in silence. So calm instrumental music plays for 2 minutes, then fades out, and by minute 5 it is quiet. Want to warm up again? Press “Warm-up”.',
+    'Музыка делает начало приятнее, а думать лучше в тишине. Поэтому 5 минут звучит спокойная музыка без слов, потом она плавно стихает, и к 10-й минуте — тишина. Захочешь войти ещё раз — кнопка «Погружение».':
+      'Music makes the start more pleasant, but thinking works better in silence. So calm instrumental music plays for 5 minutes, then fades out, and by minute 10 it is quiet. Want to warm up again? Press “Warm-up”.',
     'Спокойная музыка без слов весь блок. Может помочь на однообразной работе: почта, правки, разбор. Для чтения, письма и сложных задач лучше тишина или музыка на вход.':
       'Calm instrumental music for the whole block. It may help with repetitive work: email, edits, sorting. For reading, writing and hard tasks, silence or warm-up music is better.',
     'Лучший вариант для чтения, письма и сложных задач: ничто не отвлекает.': 'The best choice for reading, writing and hard tasks: nothing distracts you.',
@@ -66,7 +66,7 @@ const I18N = (() => {
     'Пауза музыки': 'Pause music',
     'Включить музыку': 'Play music',
     'Следующий трек': 'Next track',
-    'Ещё раз музыка на вход: 2 минуты звучит, к 5-й минуте стихает': 'Warm-up music again: plays for 2 minutes, fades out by minute 5',
+    'Ещё раз музыка на вход: 5 минут звучит, к 10-й минуте стихает': 'Warm-up music again: plays for 5 minutes, fades out by minute 10',
     'Погружение': 'Warm-up',
     'Стоп погружения': 'Stop warm-up',
     'Остановить музыку сейчас — дальше тишина': 'Stop the music now — silence from here',
@@ -78,7 +78,7 @@ const I18N = (() => {
     'Tabletop Audio · тишина': 'Tabletop Audio · silence',
     'загружается…': 'loading…',
     'на паузе': 'paused',
-    'Музыка — для приятного начала. К 5-й минуте она стихнет: думать лучше в тишине.': 'Music makes the start pleasant. It fades out by minute 5: thinking works better in silence.',
+    'Музыка — для приятного начала. К 10-й минуте она стихнет: думать лучше в тишине.': 'Music makes the start pleasant. It fades out by minute 10: thinking works better in silence.',
     'Дальше тишина — в ней лучше думается. Захочешь музыку снова — «Погружение».': 'Silence from here — it is better for thinking. Want music again? Press “Warm-up”.',
     'YouTube свёрнут': 'YouTube minimized',
     '{site} свёрнут': '{site} minimized',
@@ -250,7 +250,7 @@ const I18N = (() => {
     'Не дописал мысль? «Ещё 5 минут».': 'Mid-thought? “5 more minutes”.',
     'Всегда на виду': 'Always in sight',
     'Булавка — поверх всех окон, значок окошка — мини-плашка.': 'The pin keeps it on top; the window icon opens the mini bar.',
-    '2 минуты спокойной музыки, к 5-й минуте — тишина. Можно выбрать тишину или музыку на весь блок.': '2 minutes of calm music, silence by minute 5. You can choose silence or music for the whole block.',
+    '5 минут спокойной музыки, к 10-й минуте — тишина. Можно выбрать тишину или музыку на весь блок.': '5 minutes of calm music, silence by minute 10. You can choose silence or music for the whole block.',
     'YouTube и соцсети сворачиваются': 'YouTube and social media get minimized',
     '«Нужно для работы» — разрешить до конца блока.': '“Need it for work” allows it until the block ends.',
     'График — твоя неделя': 'The chart is your week',

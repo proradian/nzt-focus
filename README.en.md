@@ -26,7 +26,7 @@ A research-based focus timer for Windows, built with Tauri 2.
 - **Break reminders.** A notification one minute before a break ends, when it ends, and once more if you have not come back 5 minutes later.
 - **Honest time tracking.** When a block ends, the timer stops. Sleep and shutdown do not count as work.
 - **Distraction blocking.** During a block, Focus minimizes YouTube, VK, Instagram, Telegram Web and Yandex Music, and covers the window if you bring it back. You can switch off built-in sites and add your own by domain. In browsers the site is detected by the tab's address.
-- **Entry music.** By default a block starts with calm instrumental music from Tabletop Audio: it plays for 2 minutes, fades out evenly and is silent by minute 5. You can also choose silence or music for the whole block.
+- **Entry music.** By default a block starts with calm instrumental music from Tabletop Audio: it plays for 5 minutes, fades out evenly and is silent by minute 10. You can also choose silence or music for the whole block.
 - **Living background** that slowly flows across the window, a weekly chart and a day timeline that shows each block, whether it was finished or cut short, and the breaks between blocks.
 
 ## Based on research
@@ -105,7 +105,7 @@ BREAK
 SOUND
 - Three modes on the home screen: "Silence", "Sound to start" (default), "Sound for the whole block".
 - The sound is a calm background without melody or words, generated with Web Audio (a soft chord or rain-like noise), no sound files.
-- "Sound to start": the background plays for the first 2 minutes of a block, then fades over 3 minutes evenly in decibels — from 0 to −40 dB, i.e. a volume factor of 10^(−40·x/20) with x going from 0 to 1. Silence by minute 5. Do not reduce amplitude linearly: the fade is then inaudible at first and the sound drops off abruptly at the end.
+- "Sound to start": the background plays for the first 5 minutes of a block, then fades over 5 minutes evenly in decibels — from 0 to −40 dB, i.e. a volume factor of 10^(−40·x/20) with x going from 0 to 1. Silence by minute 10. Do not reduce amplitude linearly: the fade is then inaudible at first and the sound drops off abruptly at the end.
 - Start time is counted in working minutes without pauses. A "Stop immersion" button fades the sound out smoothly over 2 seconds; an "Immersion" button restarts the fade-in sequence from the current minute.
 - Default volume 30%, slider in settings.
 
