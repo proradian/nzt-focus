@@ -478,7 +478,7 @@ function startFocus(planMin, task, note, blockNo = 1) {
   if (seriesFresh()) resetSeries();
   const session = blockNo === 1 ? { blocksPlan: settings.blocks, sessionMin: 0 } : {};
   st = { ...st, ...session, phase: 'focus', task, note: note || '', planMin, basePlan: planMin, extendMin: 0, acc: 0, runFrom: now(), entryFrom: 0,
-         startedAt: now(), pausedAt: null,
+         startedAt: now(), pausedAt: null, early: false,
          micro: [], extraCount: 0, brk: null, wrapAt: null, auto: 0, seen: now(), blockNo, doneAt: null };
   save(); render();
   onFocusStart();
@@ -493,7 +493,7 @@ function recordBlock() {
     // Дата — момент конца блока, а не нажатия кнопки: блок, закрытый после выключения ПК, остаётся в своём дне.
     // Блок, завершённый с паузы, кончился, когда началась пауза. Начало и план нужны ленте дня.
     const ts = st.wrapAt || (st.runFrom ? now() : st.pausedAt || now());
-    history.push({ ts, task: st.task || '', min, from: st.startedAt || undefined, plan: st.basePlan ?? null });
+    history.push({ ts, task: st.task || '', min, from: st.startedAt || undefined, plan: st.basePlan ?? null, ...(st.early ? { early: true } : {}) });
     if (history.length > 2000) history = history.slice(-2000);
     write(K_HIST, history);
     // Блок идёт в серию, даже если после него не было перерыва («Завершить» и сразу новый блок).
@@ -946,7 +946,7 @@ function gapText(m) {
 function blockState(h) {
   if (h.plan === null) return { cls: 'full', text: tr('без таймера') };
   if (h.plan == null) return null;
-  if (h.min < h.plan - 1) return { cls: 'part', text: tr('прерван · {n} из {plan} мин', { n: h.min, plan: h.plan }) };
+  if (h.min < h.plan - 1) return { cls: 'part', text: tr(h.early ? 'закончен раньше · {n} из {plan} мин' : 'прерван · {n} из {plan} мин', { n: h.min, plan: h.plan }) };
   if (h.min > h.plan + 1) return { cls: 'full', text: tr('целый · +{n} мин', { n: h.min - h.plan }) };
   return { cls: 'full', text: tr('целый') };
 }
@@ -1102,14 +1102,33 @@ $('startBtn').onclick = () => startFocus(chosenMinutes(), $('task').value.trim()
 // ---------- Фокус: кнопки ----------
 $('pauseBtn').onclick = () => { st.runFrom ? pauseFocus() : resumeFocus(); save(); tick(); };
 
-let stopArmed = null;
+// «Завершить» раньше времени: блок засчитывается, дальше — обычный перерыв или конец на сегодня.
+// Перерыв считается по сделанным минутам, как после полного блока (breakPlan).
 $('stopBtn').onclick = () => {
-  if (!stopArmed) {
-    $('stopBtn').textContent = tr('Точно завершить?');
-    stopArmed = setTimeout(() => { stopArmed = null; $('stopBtn').textContent = tr('Завершить'); }, 3000);
-    return;
-  }
-  clearTimeout(stopArmed); stopArmed = null;
+  const m = Math.round(elapsed() / MIN), done = m >= 1, last = isLastBlock();
+  $('stopInfo').textContent = !done ? tr('Прошло меньше минуты — блок не сохранится.')
+    : isFree() ? tr('{time} фокуса засчитаются.', { time: hm(m) })
+    : tr('Сделано {n} из {plan} мин — они засчитаются.', { n: m, plan: Math.round(targetMs() / MIN) });
+  $('stopNote').value = '';
+  $('stopNoteBox').hidden = !done || last;
+  $('stopBreak').hidden = !done;
+  $('stopBreak').textContent = last ? tr('Закончить сессию') : breakLabel(breakPlan(m));
+  $('stopDay').hidden = done && last;
+  $('stopDay').textContent = done ? tr('Закончить на сегодня') : tr('Отменить блок');
+  openSheet('stopSheet');
+};
+$('stopNote').onkeydown = e => { if (e.key === 'Enter') $('stopBreak').click(); };
+$('stopBreak').onclick = () => {
+  pauseFocus(); hideMicro();
+  st.wrapAt = st.pausedAt || now(); st.early = true;
+  const plan = breakPlan(Math.round(elapsed() / MIN));
+  recordBlock();
+  if (isLastBlock()) { finishSession(); return; }
+  st.note = $('stopNote').value.trim();
+  if (plan.kind === 'long') resetSeries();
+  startBreak(plan.kind, plan.min, plan.tired);
+};
+$('stopDay').onclick = () => {
   const m = recordBlock();
   goHome(m >= 1 ? tr('Сохранено: {time} фокуса', { time: hm(m) }) : tr('Сессия отменена'));
 };

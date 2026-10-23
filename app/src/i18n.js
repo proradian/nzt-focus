@@ -247,7 +247,6 @@ const I18N = (() => {
     'Выбери время и нажми «Начать»': 'Pick a duration and press “Start”',
     '60 минут — золотая середина. Окно можно закрыть, таймер идёт.': '60 minutes is the sweet spot. You can close the window — the timer keeps running.',
     'Устал — «Перерыв сейчас»': 'Tired? “Break now”',
-    'Прервали — «Пауза» или пробел.': 'Interrupted? “Pause” or Space.',
     'Блок кончится — Focus позовёт': 'When the block ends, Focus will call you',
     'Не дописал мысль? «Ещё 5 минут».': 'Mid-thought? “5 more minutes”.',
     'Всегда на виду': 'Always in sight',
@@ -338,6 +337,15 @@ const I18N = (() => {
     "{n} {blocks} · {time} фокуса": "{n} {blocks} · {time} of focus",
     " · перерывы {time}": " · breaks {time}",
     "паузы внутри {time}": "paused inside {time}",
+
+    "Завершить блок?": "Finish the block?",
+    "Продолжить блок": "Keep going",
+    "Прошло меньше минуты — блок не сохранится.": "Less than a minute has passed — the block won't be saved.",
+    "{time} фокуса засчитаются.": "{time} of focus will be counted.",
+    "Сделано {n} из {plan} мин — они засчитаются.": "{n} of {plan} min done — they will be counted.",
+    "Отменить блок": "Cancel block",
+    "закончен раньше · {n} из {plan} мин": "finished early · {n} of {plan} min",
+    "Прервали — «Пауза» или пробел. Хватит на этот блок — «Завершить» и перерыв.": "Interrupted? “Pause” or the space bar. Done with this block? “Finish” and take a break.",
 
     // Плашка и занавес поверх отвлекающих сайтов
     'Сейчас фокус': 'Focus time',
