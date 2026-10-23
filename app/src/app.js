@@ -1103,22 +1103,28 @@ $('startBtn').onclick = () => startFocus(chosenMinutes(), $('task').value.trim()
 $('pauseBtn').onclick = () => { st.runFrom ? pauseFocus() : resumeFocus(); save(); tick(); };
 
 // «Завершить» раньше времени: блок засчитывается, дальше — обычный перерыв или конец на сегодня.
-// Перерыв считается по сделанным минутам, как после полного блока (breakPlan).
+// Перерыв вместо конца блока — только в последние EARLY_MIN минут: раньше блок ещё не сделан,
+// для усталости посреди блока есть «Перерыв сейчас». Перерыв считается по сделанным минутам (breakPlan).
+const EARLY_MIN = 10;
 $('stopBtn').onclick = () => {
   const m = Math.round(elapsed() / MIN), done = m >= 1, last = isLastBlock();
-  $('stopInfo').textContent = !done ? tr('Прошло меньше минуты — блок не сохранится.')
+  const wait = targetMs() - elapsed() - EARLY_MIN * MIN, can = done && wait <= 0;
+  $('stopInfo').textContent = (!done ? tr('Прошло меньше минуты — блок не сохранится.')
     : isFree() ? tr('{time} фокуса засчитаются.', { time: hm(m) })
-    : tr('Сделано {n} из {plan} мин — они засчитаются.', { n: m, plan: Math.round(targetMs() / MIN) });
+    : tr('Сделано {n} из {plan} мин — они засчитаются.', { n: m, plan: Math.round(targetMs() / MIN) }))
+    + (done && !can ? ' ' + tr('Закончить блок с перерывом можно за {n} минут до конца — через {time}.', { n: EARLY_MIN, time: hm(Math.max(1, Math.round(wait / MIN))) }) : '');
   $('stopNote').value = '';
-  $('stopNoteBox').hidden = !done || last;
+  $('stopNoteBox').hidden = !can || last;
   $('stopBreak').hidden = !done;
+  $('stopBreak').disabled = !can;
   $('stopBreak').textContent = last ? tr('Закончить сессию') : breakLabel(breakPlan(m));
-  $('stopDay').hidden = done && last;
+  $('stopDay').hidden = can && last;
   $('stopDay').textContent = done ? tr('Закончить на сегодня') : tr('Отменить блок');
   openSheet('stopSheet');
 };
 $('stopNote').onkeydown = e => { if (e.key === 'Enter') $('stopBreak').click(); };
 $('stopBreak').onclick = () => {
+  if ($('stopBreak').disabled) return;
   pauseFocus(); hideMicro();
   st.wrapAt = st.pausedAt || now(); st.early = true;
   const plan = breakPlan(Math.round(elapsed() / MIN));

@@ -345,7 +345,9 @@ const I18N = (() => {
     "Сделано {n} из {plan} мин — они засчитаются.": "{n} of {plan} min done — they will be counted.",
     "Отменить блок": "Cancel block",
     "закончен раньше · {n} из {plan} мин": "finished early · {n} of {plan} min",
-    "Прервали — «Пауза» или пробел. Хватит на этот блок — «Завершить» и перерыв.": "Interrupted? “Pause” or the space bar. Done with this block? “Finish” and take a break.",
+    "Прервали — «Пауза» или пробел. За 10 минут до конца блока — «Завершить» и перерыв.": "Interrupted? “Pause” or the space bar. In the last 10 minutes of a block, “Finish” goes straight to a break.",
+
+    "Закончить блок с перерывом можно за {n} минут до конца — через {time}.": "You can finish the block with a break in its last {n} minutes — in {time}.",
 
     // Плашка и занавес поверх отвлекающих сайтов
     'Сейчас фокус': 'Focus time',
