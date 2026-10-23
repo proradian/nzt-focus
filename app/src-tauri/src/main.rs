@@ -161,6 +161,7 @@ fn main() {
             guard::reset_allowed,
             guard::allow_distraction,
             guard::close_yandex_music,
+            guard::close_steam,
             guard::set_sites,
             curtain::overlay_hide
         ])

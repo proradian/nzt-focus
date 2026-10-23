@@ -40,7 +40,7 @@ See the [list of studies behind each feature](docs/research/SOURCES.md) (in Russ
 - **Untampered file.** SHA-256 of `NZT-Focus-setup.exe` version 1.0.0:
   `838f497f983309915610990d462880e6df65c0db66e230b1f022a78d187e1f99`
   Check in PowerShell: `Get-FileHash .\NZT-Focus-setup.exe` — the values must match.
-- **What it does on your computer.** Stores data only locally in `%APPDATA%\app.focus.timer\`. During a block it reads the title and address of the active browser window to minimize distracting sites. Optionally closes the Yandex Music app. Its only network access is tabletopaudio.com for music.
+- **What it does on your computer.** Stores data only locally in `%APPDATA%\app.focus.timer\`. During a block it reads the title and address of the active browser window to minimize distracting sites. Optionally closes the Yandex Music app and Steam (Steam only if you turn it on in settings). Its only network access is tabletopaudio.com for music.
 - **Your own timer instead.** Really worried about viruses? Let an AI write a timer like this for you — [prompt at the end](#prompt-build-your-own-timer).
 
 ## Build

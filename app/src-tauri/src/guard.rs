@@ -18,6 +18,7 @@ use windows_sys::Win32::UI::WindowsAndMessaging::{
 
 const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 const YANDEX_EXE: &str = "Яндекс Музыка.exe";
+const STEAM_EXE: &str = "steam.exe";
 
 static ACTIVE: AtomicBool = AtomicBool::new(false);
 /// Встроенные сайты, которые прячутся во время фокуса.
@@ -82,6 +83,18 @@ pub fn allow_distraction(kind: String) {
 pub fn close_yandex_music() -> bool {
     std::process::Command::new("taskkill")
         .args(["/IM", YANDEX_EXE, "/F"])
+        .creation_flags(CREATE_NO_WINDOW)
+        .status()
+        .map(|s| s.success())
+        .unwrap_or(false)
+}
+
+/// Закрывает Steam вместе с его процессами (steamwebhelper, запущенные из него игры).
+/// Возвращает true, если Steam был запущен.
+#[tauri::command]
+pub fn close_steam() -> bool {
+    std::process::Command::new("taskkill")
+        .args(["/IM", STEAM_EXE, "/F", "/T"])
         .creation_flags(CREATE_NO_WINDOW)
         .status()
         .map(|s| s.success())

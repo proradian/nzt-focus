@@ -349,6 +349,12 @@ const I18N = (() => {
 
     "Закончить блок с перерывом можно за {n} минут до конца — через {time}.": "You can finish the block with a break in its last {n} minutes — in {time}.",
 
+    "Закрывать Steam при старте": "Close Steam when focus starts",
+    "вместе с играми и загрузками": "along with games and downloads",
+    "Steam закрыт на время фокуса": "Steam closed for this focus block",
+
+    "Яндекс Музыка и Steam закрыты на время фокуса": "Yandex Music and Steam closed for this focus block",
+
     // Плашка и занавес поверх отвлекающих сайтов
     'Сейчас фокус': 'Focus time',
     'Этот сайт': 'This site',
