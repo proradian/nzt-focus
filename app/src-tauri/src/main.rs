@@ -162,6 +162,7 @@ fn main() {
             guard::allow_distraction,
             guard::close_yandex_music,
             guard::close_steam,
+            guard::close_telegram,
             guard::set_sites,
             curtain::overlay_hide
         ])

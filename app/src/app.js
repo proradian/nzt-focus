@@ -13,7 +13,7 @@ const write = (k, v) => {
 const DEFAULTS = {
   dur: '60', blocks: 4, breakMin: 10, longEvery: 3, longMin: 25, capMin: 90,
   micro: true, sound: true, notify: true, popup: true, extraMin: 5, lastTask: '', onTop: true,
-  soundMode: 'entry', musicCalm: true, musicVol: 30, guard: true, closeYandex: true, closeSteam: false, theme: 'indigo'
+  soundMode: 'entry', musicCalm: true, musicVol: 30, guard: true, closeYandex: true, closeSteam: false, closeTelegram: false, theme: 'indigo'
 };
 const settings = { ...DEFAULTS, ...read(K_SET, {}) };
 // С этой версии «поверх всех окон» включено по умолчанию — включаем его и тем, у кого было выключено.
@@ -249,11 +249,13 @@ T?.event?.listen('audio_level', e => fx?.audio(e.payload));
 async function onFocusStart() {
   inv('reset_allowed');
   musicUserPaused = false;
-  // Steam по умолчанию не трогаем: закрытие обрывает загрузки и запущенные игры. Включается в настройках.
-  const yandex = settings.closeYandex && await inv('close_yandex_music');
-  const steam = settings.closeSteam && await inv('close_steam');
-  if (yandex || steam) toast(yandex && steam ? tr('Яндекс Музыка и Steam закрыты на время фокуса')
-    : yandex ? tr('Яндекс Музыка закрыта на время фокуса') : tr('Steam закрыт на время фокуса'));
+  // Steam и Telegram по умолчанию не трогаем: закрытие Steam обрывает загрузки и игры,
+  // а Telegram многим нужен для работы. Включаются в настройках.
+  const apps = [['closeYandex', 'close_yandex_music', 'Яндекс Музыка'], ['closeSteam', 'close_steam', 'Steam'],
+    ['closeTelegram', 'close_telegram', 'Telegram']];
+  const closed = [];
+  for (const [key, cmd, name] of apps) if (settings[key] && await inv(cmd)) closed.push(tr(name));
+  if (closed.length) toast(tr('Закрыто на время фокуса: {apps}', { apps: closed.join(', ') }));
 }
 
 T?.event?.listen('tta-track', e => { musicTrack = e.payload || ''; syncMusic(); });

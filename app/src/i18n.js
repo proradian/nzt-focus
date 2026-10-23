@@ -99,7 +99,6 @@ const I18N = (() => {
     'Закончить через 10 минут': 'Finish in 10 minutes',
     'Блок закончится через 10 минут': 'The block will end in 10 minutes',
     'Компьютер спал или был выключен — сессия на паузе': 'The computer was asleep or off — session paused',
-    'Яндекс Музыка закрыта на время фокуса': 'Yandex Music closed for this focus block',
     'Окно поверх всех остальных': 'The window stays on top of others',
     'Окно больше не поверх остальных': 'The window no longer stays on top',
 
@@ -351,9 +350,11 @@ const I18N = (() => {
 
     "Закрывать Steam при старте": "Close Steam when focus starts",
     "вместе с играми и загрузками": "along with games and downloads",
-    "Steam закрыт на время фокуса": "Steam closed for this focus block",
 
-    "Яндекс Музыка и Steam закрыты на время фокуса": "Yandex Music and Steam closed for this focus block",
+
+    "Закрывать Telegram при старте": "Close Telegram when focus starts",
+    "приложение; сайт и так сворачивается": "the app; the website is minimized anyway",
+    "Закрыто на время фокуса: {apps}": "Closed for this focus block: {apps}",
 
     // Плашка и занавес поверх отвлекающих сайтов
     'Сейчас фокус': 'Focus time',

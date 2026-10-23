@@ -19,6 +19,7 @@ use windows_sys::Win32::UI::WindowsAndMessaging::{
 const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 const YANDEX_EXE: &str = "Яндекс Музыка.exe";
 const STEAM_EXE: &str = "steam.exe";
+const TELEGRAM_EXE: &str = "Telegram.exe";
 
 static ACTIVE: AtomicBool = AtomicBool::new(false);
 /// Встроенные сайты, которые прячутся во время фокуса.
@@ -78,27 +79,37 @@ pub fn allow_distraction(kind: String) {
     }
 }
 
-/// Закрывает приложение Яндекс Музыки. Возвращает true, если оно было запущено.
-#[tauri::command]
-pub fn close_yandex_music() -> bool {
+/// Закрывает программу по имени exe; tree — вместе с запущенными из неё процессами.
+/// Возвращает true, если программа была запущена.
+fn kill(exe: &str, tree: bool) -> bool {
+    let mut args = vec!["/IM", exe, "/F"];
+    if tree {
+        args.push("/T");
+    }
     std::process::Command::new("taskkill")
-        .args(["/IM", YANDEX_EXE, "/F"])
+        .args(args)
         .creation_flags(CREATE_NO_WINDOW)
         .status()
         .map(|s| s.success())
         .unwrap_or(false)
 }
 
+/// Закрывает приложение Яндекс Музыки.
+#[tauri::command]
+pub fn close_yandex_music() -> bool {
+    kill(YANDEX_EXE, false)
+}
+
+/// Закрывает Telegram Desktop.
+#[tauri::command]
+pub fn close_telegram() -> bool {
+    kill(TELEGRAM_EXE, false)
+}
+
 /// Закрывает Steam вместе с его процессами (steamwebhelper, запущенные из него игры).
-/// Возвращает true, если Steam был запущен.
 #[tauri::command]
 pub fn close_steam() -> bool {
-    std::process::Command::new("taskkill")
-        .args(["/IM", STEAM_EXE, "/F", "/T"])
-        .creation_flags(CREATE_NO_WINDOW)
-        .status()
-        .map(|s| s.success())
-        .unwrap_or(false)
+    kill(STEAM_EXE, true)
 }
 
 fn window_title(hwnd: HWND) -> String {
